@@ -1,9 +1,9 @@
 @echo off
-title BAIF CSR Offline Translation System Launcher
+title Offline Translation System Launcher
 color 0A
 
 echo ====================================================
-echo       BAIF CSR Offline Translation System Launcher
+echo       Offline Translation System Launcher
 echo ====================================================
 
 :: Check for Python
@@ -72,7 +72,7 @@ if %errorlevel% neq 0 (
     echo     Please download and install FFmpeg from https://ffmpeg.org/download.html
 )
 
-echo [✓] Initialization completed. Starting BAIF Translation Server...
+echo [✓] Initialization completed. Starting Translation Server...
 echo [*] App running at: http://localhost:8000
 echo [*] Press Ctrl+C to stop the server.
 echo ====================================================

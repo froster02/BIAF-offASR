@@ -8,7 +8,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}====================================================${NC}"
-echo -e "${GREEN}      BAIF CSR Offline Translation System Launcher  ${NC}"
+echo -e "${GREEN}      Offline Translation System Launcher  ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 # Check for Python
@@ -67,7 +67,7 @@ if ! command -v ffmpeg &> /dev/null; then
     echo -e "${YELLOW}    To install: 'brew install ffmpeg' (macOS) or 'sudo apt install ffmpeg' (Linux).${NC}"
 fi
 
-echo -e "${GREEN}[✓] Initialization completed. Starting BAIF Translation Server...${NC}"
+echo -e "${GREEN}[✓] Initialization completed. Starting Translation Server...${NC}"
 echo -e "${BLUE}[*] App running at: http://localhost:8000${NC}"
 echo -e "${BLUE}[*] Press Ctrl+C to stop the server.${NC}"
 echo -e "${BLUE}====================================================${NC}"

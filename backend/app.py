@@ -10,7 +10,7 @@ from pydantic import BaseModel
 import models
 import subtitles
 
-app = FastAPI(title="BAIF Offline Translation API", version="1.0.0")
+app = FastAPI(title="Offline Translation API", version="1.0.0")
 
 # Enable CORS for frontend local development
 app.add_middleware(

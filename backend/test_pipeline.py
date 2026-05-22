@@ -9,7 +9,7 @@ import models
 
 def test_pipeline():
     print("=" * 60)
-    print("   BAIF OFFLINE TRANSLATION PIPELINE FUNCTIONAL TEST   ")
+    print("   OFFLINE TRANSLATION PIPELINE FUNCTIONAL TEST   ")
     print("=" * 60)
     
     # 1. Initialize Model Manager

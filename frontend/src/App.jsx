@@ -258,7 +258,7 @@ function App() {
   };
 
   const pageSubtitles = {
-    dashboard: 'BAIF enterprise offline AI portal — bridging Indian regional language barriers.',
+    dashboard: 'An enterprise offline AI portal — bridging Indian regional language barriers.',
     text:      'Translate sentences instantly across Marathi, Hindi, and English.',
     audio:     'Transcribe audio tracks, translate texts, and synthesize spoken voiceovers.',
     video:     'Extract dialogue, burn-in subtitles, and replace spoken tracks on media files.',
@@ -274,7 +274,7 @@ function App() {
         <div className="navbar-brand">
           <div className="navbar-logo">🌾</div>
           <div className="navbar-title">
-            <span className="navbar-title-main">BAIF OffASR</span>
+                        <span className="navbar-title-main">OfflineASR</span>
             <span className="navbar-title-sub">Offline AI Translation</span>
           </div>
         </div>
@@ -319,10 +319,10 @@ function App() {
 
             {/* Hero Banner */}
             <div className="hero-banner">
-              <div className="hero-badge">🌾 BAIF Development Research Foundation</div>
+              <div className="hero-badge">🌾 Offline AI Translation Portal</div>
               <h2 className="hero-title">Bridging the Language Gap for Rural India</h2>
               <p className="hero-subtitle">
-                This portal empowers BAIF field workers and colleagues to seamlessly translate
+                This portal empowers field workers and colleagues to seamlessly translate
                 educational and development resources across Hindi, Marathi, and English —
                 entirely offline, with zero internet requirements and zero data leakage.
               </p>
@@ -563,7 +563,7 @@ function App() {
                   <div className="progress-panel">
                     <div className="progress-header">
                       <div className="processing-pulse">🔄 Processing...</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--baif-green-dark)' }}>{audioProgress}%</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--green-dark)' }}>{audioProgress}%</div>
                     </div>
                     <div className="progress-bar-container">
                       <div className="progress-bar" style={{ width: `${audioProgress}%` }} />
@@ -734,7 +734,7 @@ function App() {
                   <div className="progress-panel">
                     <div className="progress-header">
                       <div className="processing-pulse">🎞️ Rendering...</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--baif-green-dark)' }}>{videoProgress}%</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--green-dark)' }}>{videoProgress}%</div>
                     </div>
                     <div className="progress-bar-container">
                       <div className="progress-bar" style={{ width: `${videoProgress}%` }} />
@@ -845,7 +845,7 @@ function App() {
                 </div>
                 {modelsStatus.models_dir && (
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.875rem', marginTop: '0.25rem' }}>
-                    📁 Cache path: <code style={{ background: 'var(--baif-green-pale)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>{modelsStatus.models_dir}</code>
+                    📁 Cache path: <code style={{ background: 'var(--green-pale)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>{modelsStatus.models_dir}</code>
                   </div>
                 )}
               </div>
@@ -867,12 +867,9 @@ function App() {
       <footer className="app-footer">
         <div className="footer-brand">
           <span>🌾</span>
-          BAIF Development Research Foundation
+          Offline Translation Portal
         </div>
-        <div className="footer-copy">
-          Offline AI Translation Portal · BAIF Bhavan, Warje, Pune 411058 · baif@baif.org.in
-        </div>
-        <div className="footer-copy">© {new Date().getFullYear()} BAIF. All rights reserved.</div>
+        <div className="footer-copy">© {new Date().getFullYear()} All rights reserved.</div>
       </footer>
     </div>
   );

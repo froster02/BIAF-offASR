@@ -1,5 +1,5 @@
 ---
-title: BAIF Offline Translation Portal
+title: Offline Translation Portal
 emoji: 🌾
 colorFrom: green
 colorTo: indigo
@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 ---
 
-# 🌾 BAIF CSR Offline Translation System
+# 🌾 Offline Translation System
 
 [![Offline First](https://img.shields.io/badge/Offline--First-Zero--Network-emerald?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
 [![Hardware Accelerated](https://img.shields.io/badge/PyTorch-MPS%20%2F%20CUDA%20Accelerated-indigo?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
@@ -24,7 +24,7 @@ The system is fully deployed on **Hugging Face Spaces** as a free hosting soluti
 ## 📸 Presentation Pitch Deck
 
 We have created an extensive, professional 16:9 dark-theme widescreen pitch presentation outlining the problem space, local constraints, architecture, hardware setup, engineering breakthroughs, and rural impact for the competition judges:
-* **Presentation Deck File**: [`BAIF_Offline_Translation_Presentation.pptx`](file:///Users/arushnaudiyal/Documents/GitHub%20Projects/BAIF/BAIF_Offline_Translation_Presentation.pptx)
+
 
 ---
 
