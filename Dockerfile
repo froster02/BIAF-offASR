@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build the FastAPI backend and final image
-FROM python:3.9-slim-buster
+FROM python:3.9-slim-bookworm
 
 # Install system dependencies (ffmpeg and libsndfile1 for sound processing)
 RUN apt-get update && apt-get install -y --no-install-recommends \
