@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build the FastAPI backend and final image
-FROM python:3.9-slim-bookworm
+FROM python:3.11-slim-bookworm
 
 # Install system dependencies (ffmpeg and libsndfile1 for sound processing)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +22,7 @@ WORKDIR /app
 COPY backend/requirements.txt ./backend/
 
 # Optimize PyTorch: Install CPU-only PyTorch to reduce image size drastically from 5GB+ to under 2GB (excluding models)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir "torch>=2.6.0" --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # Copy all source files
