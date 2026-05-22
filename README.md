@@ -1,4 +1,15 @@
+---
+title: BAIF Offline Translation Portal
+emoji: 🌾
+colorFrom: green
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🌾 BAIF CSR Offline Translation System
+
 
 [![Offline First](https://img.shields.io/badge/Offline--First-Zero--Network-emerald?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
 [![Hardware Accelerated](https://img.shields.io/badge/PyTorch-MPS%20%2F%20CUDA%20Accelerated-indigo?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
