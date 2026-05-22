@@ -10,13 +10,14 @@ pinned: false
 
 # 🌾 BAIF CSR Offline Translation System
 
-
 [![Offline First](https://img.shields.io/badge/Offline--First-Zero--Network-emerald?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
 [![Hardware Accelerated](https://img.shields.io/badge/PyTorch-MPS%20%2F%20CUDA%20Accelerated-indigo?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
 [![Docker Support](https://img.shields.io/badge/Docker-Multi--Stage%20Bake-blue?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
-[![Railway Deployed](https://img.shields.io/badge/Deployed--To-Railway-deeppink?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
+[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Space-yellow?style=for-the-badge)](https://huggingface.co/spaces/froster02/BIAF-offASR)
 
 A local-first, zero-network-access platform built to process translation, subtitling, and voice dubbing of agricultural and rural development content (supporting **Hindi**, **Marathi**, and **English**) offline. The portal uses localized deep learning models optimized for consumer hardware (e.g., Apple Silicon, Windows, or Linux laptops), bridging the communication gap in rural sectors securely and efficiently.
+
+The system is fully deployed on **Hugging Face Spaces** as a free hosting solution, leveraging a CPU-optimized, secure, and pre-baked container architecture.
 
 ---
 
@@ -96,19 +97,39 @@ During translation to Marathi/Hindi, seq2seq decoders often get caught in repeat
   1. Fixed a tokenizer bug by explicitly defining `tokenizer.src_lang` prior to sentence encoding.
   2. Tuned decoding hyperparameters by enforcing Beam Search (`num_beams=4`) and a repetition penalty block (`no_repeat_ngram_size=3`), yielding grammatically correct and pristine Devanagari outputs.
 
-### 🐳 4. Multi-Stage Docker Baking
-To make production deployments seamless on platforms like Railway, our `Dockerfile` uses a smart multi-stage recipe:
-* **Stage 1**: Compiles the React UI inside a lightweight Node Alpine environment.
+### 🐳 4. Multi-Stage Docker Baking & Model Size Shrinking
+To make production deployments seamless on platforms like Hugging Face, our `Dockerfile` uses a smart multi-stage recipe:
+* **Stage 1**: Compiles the React UI inside a lightweight `node:20-alpine` environment, preventing dependency compatibility crashes with Vite's build lifecycle.
 * **Stage 2**: Sets up Python, installs standard packages, and automatically triggers `backend/download_models.py` **during image build time**. 
-* **Model Baking Benefit**: The 3.1GB of model weights are baked directly into the read-only Docker image layer. Railway does not need complex, expensive persistent storage volumes, and server starts are **instantaneous**.
+* **Model Baking Benefit**: The 3.1GB of model weights are baked directly into the read-only Docker image layer. Hugging Face does not need complex, expensive persistent storage volumes, and server starts are **instantaneous**.
 * **PyTorch Footprint Optimization**: Installed CPU-only PyTorch binaries directly via standard wheels, slashing the base image size by **over 2.3 GB**.
+
+### 🛡️ 5. Hugging Face Security Compliance (PyTorch >=2.6.0 & CVE-2025-32434 Bypass)
+During cloud deployment, we successfully bypassed recent platform security blocks relating to pickle deserialization:
+* **Problem**: Hugging Face Spaces block standard `torch.load` functions on PyTorch versions `<2.6.0` due to `CVE-2025-32434` remote code execution security risks. This caused translation APIs to throw a 500 error.
+* **Resolution**: Upgraded the Docker base OS layer to **`python:3.11-slim-bookworm`** and enforced **`torch>=2.6.0`** across the container environment, ensuring safe, compliant, and robust weights loading.
+
+---
+
+## 🧪 Local Functional & Regression Testing
+
+We maintain a comprehensive functional verification suite to guarantee high reliability before cloud synchronization:
+- **Execution Script**:
+  ```bash
+  ./venv/bin/python3 backend/test_pipeline.py
+  ```
+- **Test Matrix Validation**:
+  - **Hardware Acceleration Check**: Asserts Apple Silicon GPU (`mps`) binding.
+  - **Translation Robustness**: Tests 6 multilingual translation directions across Hindi, Marathi, and English.
+  - **Vectorized Batching Check**: Validates parallel sentence translations.
+  - **Text-to-Speech Output**: Generates vocal samples (`test_tts_english.wav`, `test_tts_hindi.wav`, and `test_tts_marathi.wav`) verifying sizing and 16,000Hz sampling.
 
 ---
 
 ## 💻 Local Setup & Installation
 
 ### System Requirements
-* **Python**: `python3` (3.8 to 3.10 recommended).
+* **Python**: `python3` (3.8 to 3.11 recommended).
 * **FFmpeg**: Required for audio extraction, subtitling, and audio overlay on video.
   * *macOS*: `brew install ffmpeg`
   * *Ubuntu/Linux*: `sudo apt update && sudo apt install ffmpeg`
@@ -137,24 +158,22 @@ The server will initialize on **`http://localhost:8000`**. The launcher automati
 
 ---
 
-## 🚊 Railway Deployment Instructions
+## 🤗 Hugging Face Spaces Deployment Instructions
 
-This monorepo is fully prepared for continuous deployment on [Railway](https://railway.app) using our highly-optimized, single-port Docker file.
+This monorepo is fully prepared for zero-cost, continuous deployment on **Hugging Face Spaces** using our highly-optimized, single-port Docker file.
 
 ### Step-by-Step Deployment Guide
-1. **Push Code to GitHub**:
-   Ensure you have cloned or pushed the repository to your GitHub profile (e.g. `https://github.com/froster02/BIAF-offASR.git`).
-2. **Create a New Project on Railway**:
-   * Go to the Railway Dashboard and click **New Project**.
-   * Select **Deploy from GitHub repo** and connect your `BIAF-offASR` repository.
-3. **Configure Resource Allocations**:
-   * NLLB-200 and Whisper base execution require at least **2GB RAM** (4GB recommended). Under the service settings, ensure your RAM limit is adjusted to accommodate these offline weights.
-4. **Environment Variables Configuration**:
-   Railway automatically assigns a public URL and injects the `PORT` variable. Ensure no other variables are required as our `Dockerfile` dynamically binds to `${PORT}`:
-   ```env
-   PORT=8000
+1. **Create a New Space**:
+   * Go to Hugging Face Spaces and click **Create a New Space**.
+   * Set the SDK to **Docker** and pick the **Blank** template.
+   * Choose the free **CPU Basic** hardware tier.
+2. **Push Code to GitHub**:
+   Add the Hugging Face space repository as a git remote and push your `main` branch:
+   ```bash
+   git remote add hf https://huggingface.co/spaces/<your-username>/<your-space-name>
+   git push -f hf main
    ```
-5. **Continuous Deployment Build**:
-   * Railway will automatically detect the root `Dockerfile`.
-   * It runs Stage 1 (npm build) and Stage 2 (baking python packages and downloading all HuggingFace weights into the image).
-   * Once completed, Railway will expose a secure `https://*.up.railway.app` URL serving both the glassmorphic React user interface and full audio/video translation APIs!
+3. **Automatic Deployment Build**:
+   * Hugging Face will automatically detect the root `Dockerfile`.
+   * It builds Stage 1 (React static assets compilation) and Stage 2 (installs Python 3.11, packages, upgrades to PyTorch 2.6.0, and downloads all models).
+   * Once complete, the Space will transition to `RUNNING` and expose your secure application portal publicly!

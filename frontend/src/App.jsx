@@ -62,7 +62,7 @@ function App() {
 
   useEffect(() => {
     checkServerStatus();
-    const interval = setInterval(checkServerStatus, 5000); // Check status every 5 seconds
+    const interval = setInterval(checkServerStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -135,7 +135,7 @@ function App() {
     setIsProcessingAudio(true);
     setAudioProgress(10);
     setAudioProgressText('Uploading audio file and initializing pipeline...');
-    
+
     const formData = new FormData();
     formData.append('file', audioFile);
     formData.append('model_size', whisperSize);
@@ -143,21 +143,11 @@ function App() {
     formData.append('tgt_lang', audioTgtLang);
 
     try {
-      // Simulate progress updates for a smoother visual feel
       const progressInterval = setInterval(() => {
         setAudioProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          if (prev >= 70) {
-            setAudioProgressText('Translating text segments and synthesizing dubbing audio...');
-            return prev + 1;
-          }
-          if (prev >= 40) {
-            setAudioProgressText('Transcribing speech offline using Whisper ASR...');
-            return prev + 2;
-          }
+          if (prev >= 90) { clearInterval(progressInterval); return prev; }
+          if (prev >= 70) { setAudioProgressText('Translating text segments and synthesizing dubbing audio...'); return prev + 1; }
+          if (prev >= 40) { setAudioProgressText('Transcribing speech offline using Whisper ASR...'); return prev + 2; }
           return prev + 5;
         });
       }, 800);
@@ -215,22 +205,10 @@ function App() {
     try {
       const progressInterval = setInterval(() => {
         setVideoProgress((prev) => {
-          if (prev >= 95) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          if (prev >= 75) {
-            setVideoProgressText('Injecting subtitle layers and copying streams with FFmpeg...');
-            return prev + 1;
-          }
-          if (prev >= 45) {
-            setVideoProgressText('Translating timeline and rendering transcript overlays...');
-            return prev + 2;
-          }
-          if (prev >= 20) {
-            setVideoProgressText('Running speech-to-text extraction using Whisper...');
-            return prev + 3;
-          }
+          if (prev >= 95) { clearInterval(progressInterval); return prev; }
+          if (prev >= 75) { setVideoProgressText('Injecting subtitle layers and copying streams with FFmpeg...'); return prev + 1; }
+          if (prev >= 45) { setVideoProgressText('Translating timeline and rendering transcript overlays...'); return prev + 2; }
+          if (prev >= 20) { setVideoProgressText('Running speech-to-text extraction using Whisper...'); return prev + 3; }
           return prev + 5;
         });
       }, 1000);
@@ -262,207 +240,254 @@ function App() {
     }
   };
 
+  // Nav items config
+  const navItems = [
+    { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
+    { id: 'text',      icon: '✍️', label: 'Text Translate' },
+    { id: 'audio',     icon: '🎵', label: 'Audio Dub' },
+    { id: 'video',     icon: '🎬', label: 'Video Dub' },
+    { id: 'settings',  icon: '⚙️', label: 'Settings' },
+  ];
+
+  const pageTitles = {
+    dashboard: 'CSR Translation Hub',
+    text:      'Text Translator',
+    audio:     'Speech & Audio Dubber',
+    video:     'Video Subtitler & Dubber',
+    settings:  'App Settings & Local Models',
+  };
+
+  const pageSubtitles = {
+    dashboard: 'BAIF enterprise offline AI portal — bridging Indian regional language barriers.',
+    text:      'Translate sentences instantly across Marathi, Hindi, and English.',
+    audio:     'Transcribe audio tracks, translate texts, and synthesize spoken voiceovers.',
+    video:     'Extract dialogue, burn-in subtitles, and replace spoken tracks on media files.',
+    settings:  'Configure offline hardware capabilities and model cache states.',
+  };
+
   return (
     <div className="app-container">
-      {/* Sidebar Navigation */}
-      <div className="sidebar">
-        <div className="brand-section">
-          <div className="brand-logo">B</div>
-          <div className="brand-name">BAIF OffASR</div>
+
+      {/* ── Top Navigation Bar ── */}
+      <nav className="navbar">
+        {/* Brand */}
+        <div className="navbar-brand">
+          <div className="navbar-logo">🌾</div>
+          <div className="navbar-title">
+            <span className="navbar-title-main">BAIF OffASR</span>
+            <span className="navbar-title-sub">Offline AI Translation</span>
+          </div>
         </div>
 
+        <div className="navbar-divider" />
+
+        {/* Nav Links */}
         <div className="nav-links">
-          <button 
-            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <span>🏠</span> Dashboard
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'text' ? 'active' : ''}`}
-            onClick={() => setActiveTab('text')}
-          >
-            <span>✍️</span> Text Translate
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'audio' ? 'active' : ''}`}
-            onClick={() => setActiveTab('audio')}
-          >
-            <span>🎵</span> Audio Translate
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'video' ? 'active' : ''}`}
-            onClick={() => setActiveTab('video')}
-          >
-            <span>🎬</span> Video Translate
-          </button>
-          <button 
-            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <span>⚙️</span> Settings
-          </button>
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
         </div>
 
-        <div className="sidebar-footer">
-          <div className="status-label">Offline Node Status</div>
-          <div className="status-indicator">
-            <span className={`dot ${isConnected ? '' : 'offline'}`}></span>
-            {isConnected ? 'Fully Connected' : 'Disconnected'}
-          </div>
-          {isConnected && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Models: {modelsStatus.is_cached ? '📦 Pre-cached' : '⚠️ Cloud Fetch'}
-            </div>
-          )}
+        {/* Connection Status */}
+        <div className={`navbar-status ${isConnected ? 'online' : 'offline'}`}>
+          <span className={`dot ${isConnected ? '' : 'offline'}`} />
+          {isConnected ? 'Connected' : 'Offline'}
         </div>
-      </div>
+      </nav>
 
-      {/* Main Workspace Area */}
+      {/* ── Main Content ── */}
       <div className="main-content">
-        
-        {/* Dynamic Headers */}
+
+        {/* Page Header */}
         <div className="header-container">
-          <div>
-            <h1 className="page-title">
-              {activeTab === 'dashboard' && 'CSR Tech for Good Hub'}
-              {activeTab === 'text' && 'Text Translator'}
-              {activeTab === 'audio' && 'Speech & Audio Dubber'}
-              {activeTab === 'video' && 'Video Subtitler & Dubber'}
-              {activeTab === 'settings' && 'App Settings & Local Models'}
-            </h1>
-            <p className="page-subtitle">
-              {activeTab === 'dashboard' && 'BAIF enterprise offline AI portal to bridge Indian regional language barriers.'}
-              {activeTab === 'text' && 'Translate sentences instantly across Marathi, Hindi, and English.'}
-              {activeTab === 'audio' && 'Transcribe audio tracks, translate texts, and synthesize spoken voiceovers.'}
-              {activeTab === 'video' && 'Extract dialogue, burn-in subtitles, and replace spoken tracks on complex media files.'}
-              {activeTab === 'settings' && 'Configure offline hardware capabilities and cache check states.'}
-            </p>
-          </div>
+          <h1 className="page-title">{pageTitles[activeTab]}</h1>
+          <p className="page-subtitle">{pageSubtitles[activeTab]}</p>
         </div>
 
-        {/* Dashboard Tab */}
+        {/* ════════════════════════════════════════
+            DASHBOARD TAB
+        ════════════════════════════════════════ */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {/* Quick Overview Info Panel */}
-            <div className="glass-card translator-grid">
-              <div>
-                <h2 style={{ marginBottom: '1rem', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.75rem' }}>
-                  Bridging the Language Gap
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                  This application empowers BAIF permanent colleagues and field workers to seamlessly translate educational and developmental resources. All tools execute **entirely locally** on BAIF servers, with zero licensing fees, zero internet requirements, and zero data leakage.
-                </p>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button className="btn btn-primary" onClick={() => setActiveTab('text')}>Start Translating</button>
-                  <button className="btn btn-secondary" onClick={() => setActiveTab('settings')}>Check Models Cache</button>
-                </div>
+
+            {/* Hero Banner */}
+            <div className="hero-banner">
+              <div className="hero-badge">🌾 BAIF Development Research Foundation</div>
+              <h2 className="hero-title">Bridging the Language Gap for Rural India</h2>
+              <p className="hero-subtitle">
+                This portal empowers BAIF field workers and colleagues to seamlessly translate
+                educational and development resources across Hindi, Marathi, and English —
+                entirely offline, with zero internet requirements and zero data leakage.
+              </p>
+              <div className="hero-actions">
+                <button className="btn btn-outline-white" onClick={() => setActiveTab('text')}>
+                  ✍️ Start Translating
+                </button>
+                <button className="btn btn-outline-white" onClick={() => setActiveTab('settings')}>
+                  ⚙️ Check Model Cache
+                </button>
               </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>System Capabilities</h3>
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <li>✓ **Text Translation**: Distilled NLLB model optimized for regional Indian dialects.</li>
-                  <li>✓ **Audio Transcriber**: Whisper base ASR for automatic audio chunking.</li>
-                  <li>✓ **Synthesized Voice**: Meta Massively Multilingual Speech (MMS) VITS.</li>
-                  <li>✓ **Subtitles Processing**: High-speed ffmpeg wrapper for burning SRT overlays.</li>
-                </ul>
+
+              <div className="hero-stats">
+                <div className="hero-stat">
+                  <div className="hero-stat-value">3</div>
+                  <div className="hero-stat-label">Indian Languages</div>
+                </div>
+                <div className="hero-stat">
+                  <div className="hero-stat-value">100%</div>
+                  <div className="hero-stat-label">Offline Capable</div>
+                </div>
+                <div className="hero-stat">
+                  <div className="hero-stat-value">0</div>
+                  <div className="hero-stat-label">API Fees</div>
+                </div>
               </div>
             </div>
 
-            {/* Feature Cards Grid */}
-            <div className="list-grid">
-              <div className="glass-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('text')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>✍️</div>
-                <h3 style={{ marginBottom: '0.5rem' }}>Text Translation</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Fast, reliable, and completely offline text translations across Marathi, Devanagari Hindi, and English.</p>
+            {/* Capabilities Grid + System Info */}
+            <div className="translator-grid">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="section-title">What you can do</div>
+                <div className="capabilities-grid">
+                  <div className="capability-card" onClick={() => setActiveTab('text')}>
+                    <div className="capability-icon">✍️</div>
+                    <div className="capability-title">Text Translation</div>
+                    <div className="capability-desc">Fast, offline text translation between Marathi, Hindi, and English.</div>
+                  </div>
+                  <div className="capability-card" onClick={() => setActiveTab('audio')}>
+                    <div className="capability-icon">🎵</div>
+                    <div className="capability-title">Audio Translation</div>
+                    <div className="capability-desc">Upload audio, transcribe it, and generate natural regional voiceovers.</div>
+                  </div>
+                  <div className="capability-card" onClick={() => setActiveTab('video')}>
+                    <div className="capability-icon">🎬</div>
+                    <div className="capability-title">Video Dubbing</div>
+                    <div className="capability-desc">Process video files to generate translated subtitles and burned-in captions.</div>
+                  </div>
+                  <div className="capability-card" onClick={() => setActiveTab('text')}>
+                    <div className="capability-icon">🔊</div>
+                    <div className="capability-title">Text-to-Speech</div>
+                    <div className="capability-desc">Synthesize translated text into natural regional spoken audio using MMS-TTS.</div>
+                  </div>
+                </div>
               </div>
-              <div className="glass-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('audio')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎵</div>
-                <h3 style={{ marginBottom: '0.5rem' }}>Audio Translation</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Upload raw sound streams, translate, and generate natural regional text-to-speech voiceovers.</p>
-              </div>
-              <div className="glass-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('video')}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎬</div>
-                <h3 style={{ marginBottom: '0.5rem' }}>Video Dubbing</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Process files to generate translated subtitle timelines (SRT/VTT) and render burned-in video captions.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="section-title">System Capabilities</div>
+                <div className="system-info-card">
+                  <ul className="system-info-list">
+                    <li>Text Translation via Meta NLLB-200 distilled Seq2Seq model optimized for Indian languages.</li>
+                    <li>Audio Transcription using OpenAI Whisper ASR with automatic chunking & segmentation.</li>
+                    <li>Synthesized Voice via Meta MMS VITS text-to-speech for Hindi, Marathi & English.</li>
+                    <li>Subtitle Processing through a high-speed FFmpeg wrapper for SRT/VTT burn-in.</li>
+                    <li>Thread-safe concurrent access using reentrant RLock on all PyTorch models.</li>
+                    <li>2.42x batch translation speedup via vectorized NLLB padding on Apple Silicon MPS.</li>
+                  </ul>
+                </div>
+
+                <div className="section-title" style={{ marginTop: '0.5rem' }}>Offline Node Status</div>
+                <div className="system-info-card">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div className="checklist-item">
+                      <span className="checklist-item-label">🖥️ Backend Server</span>
+                      <span className={isConnected ? 'status-ok' : 'status-warn'}>
+                        {isConnected ? '✓ Connected' : '✗ Offline'}
+                      </span>
+                    </div>
+                    <div className="checklist-item">
+                      <span className="checklist-item-label">📦 Model Cache</span>
+                      <span className={modelsStatus.is_cached ? 'status-ok' : 'status-warn'}>
+                        {modelsStatus.is_cached ? '✓ Pre-cached' : '⚠ Cloud Fetch'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Text Translation Tab */}
+        {/* ════════════════════════════════════════
+            TEXT TRANSLATION TAB
+        ════════════════════════════════════════ */}
         {activeTab === 'text' && (
           <div className="glass-card">
+            {/* Language Selectors */}
             <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Source Language</label>
                 <select className="select-control" value={textSrcLang} onChange={(e) => setTextSrcLang(e.target.value)}>
-                  <option value="English">English</option>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
+                  <option value="English">🇬🇧 English</option>
+                  <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
+                  <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
                 </select>
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Target Language</label>
                 <select className="select-control" value={textTgtLang} onChange={(e) => setTextTgtLang(e.target.value)}>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
-                  <option value="English">English</option>
+                  <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
+                  <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
+                  <option value="English">🇬🇧 English</option>
                 </select>
               </div>
             </div>
 
-            <div className="translator-grid" style={{ marginBottom: '2rem' }}>
-              <div className="form-group">
-                <label className="form-label">Enter Original Text</label>
-                <textarea 
+            {/* Text Areas */}
+            <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Original Text</label>
+                <textarea
                   className="textarea-control"
-                  placeholder="Type or paste sentences here..."
+                  placeholder="Type or paste your text here..."
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Translated Output</label>
-                <div 
-                  className="textarea-control"
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.02)', 
-                    overflowY: 'auto',
-                    whiteSpace: 'pre-wrap'
-                  }}
+                <div
+                  className="textarea-control output-box"
+                  style={{ cursor: 'default' }}
                 >
-                  {textOutput || <span style={{ color: 'var(--text-muted)' }}>Translated text will appear here...</span>}
+                  {textOutput
+                    ? textOutput
+                    : <span className="output-box-placeholder">Translated text will appear here...</span>
+                  }
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button 
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
                 className="btn btn-primary"
                 onClick={handleTextTranslate}
                 disabled={isTranslatingText || !textInput.trim()}
               >
-                {isTranslatingText ? 'Translating...' : '⚡ Translate Text'}
+                {isTranslatingText ? '⏳ Translating...' : '⚡ Translate Text'}
               </button>
 
               {textOutput && (
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <button 
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
                     className="btn btn-secondary"
-                    onClick={() => {
-                      navigator.clipboard.writeText(textOutput);
-                      alert('Copied to clipboard!');
-                    }}
+                    onClick={() => { navigator.clipboard.writeText(textOutput); alert('Copied to clipboard!'); }}
                   >
                     📋 Copy Text
                   </button>
-                  <button 
+                  <button
                     className="btn btn-secondary"
                     onClick={handleTextToSpeech}
                     disabled={isGeneratingTts}
                   >
-                    {isGeneratingTts ? 'Generating Audio...' : '🔊 Speak Aloud (TTS)'}
+                    {isGeneratingTts ? '⏳ Generating...' : '🔊 Speak Aloud (TTS)'}
                   </button>
                   {ttsAudioUrl && (
                     <audio src={ttsAudioUrl} controls autoPlay className="custom-audio-player" style={{ width: '220px', marginTop: 0 }} />
@@ -473,17 +498,19 @@ function App() {
           </div>
         )}
 
-        {/* Audio Translation Tab */}
+        {/* ════════════════════════════════════════
+            AUDIO TRANSLATION TAB
+        ════════════════════════════════════════ */}
         {activeTab === 'audio' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div className="glass-card translator-grid">
-              {/* Left Column: Dropzone and Settings */}
+              {/* Left: Dropzone & Settings */}
               <div>
                 <div className="form-group">
                   <label className="form-label">Select Languages</label>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>From</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>From</span>
                       <select className="select-control" value={audioSrcLang} onChange={(e) => setAudioSrcLang(e.target.value)}>
                         <option value="English">English</option>
                         <option value="Hindi">Hindi</option>
@@ -491,7 +518,7 @@ function App() {
                       </select>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>To</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>To</span>
                       <select className="select-control" value={audioTgtLang} onChange={(e) => setAudioTgtLang(e.target.value)}>
                         <option value="Hindi">Hindi</option>
                         <option value="Marathi">Marathi</option>
@@ -501,16 +528,11 @@ function App() {
                   </div>
                 </div>
 
-                <div 
-                  className="dropzone"
-                  onClick={() => audioFileInputRef.current.click()}
-                >
+                <div className="dropzone" onClick={() => audioFileInputRef.current.click()}>
                   <div className="dropzone-icon">📥</div>
-                  <div style={{ fontWeight: 600 }}>Click to browse audio files</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Supports MP3, WAV, AAC, M4A, FLAC, WMA, OGG
-                  </div>
-                  <input 
+                  <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click to browse audio files</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Supports MP3, WAV, AAC, M4A, FLAC, OGG</div>
+                  <input
                     type="file"
                     ref={audioFileInputRef}
                     style={{ display: 'none' }}
@@ -521,30 +543,30 @@ function App() {
 
                 {audioFile && (
                   <div className="file-badge" style={{ marginTop: '1rem' }}>
-                    <span>📄</span>
+                    <span>🎵</span>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {audioFile.name} ({(audioFile.size / (1024 * 1024)).toFixed(2)} MB)
                     </div>
                   </div>
                 )}
 
-                <button 
+                <button
                   className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '1.5rem' }}
+                  style={{ width: '100%', marginTop: '1.25rem' }}
                   disabled={!audioFile || isProcessingAudio}
                   onClick={processAudio}
                 >
-                  {isProcessingAudio ? 'Processing Audio...' : '⚙️ Transcribe & Dub Audio'}
+                  {isProcessingAudio ? '⏳ Processing Audio...' : '⚙️ Transcribe & Dub Audio'}
                 </button>
 
                 {isProcessingAudio && (
                   <div className="progress-panel">
                     <div className="progress-header">
-                      <div className="processing-pulse">Processing...</div>
-                      <div style={{ fontSize: '0.85rem' }}>{audioProgress}%</div>
+                      <div className="processing-pulse">🔄 Processing...</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--baif-green-dark)' }}>{audioProgress}%</div>
                     </div>
                     <div className="progress-bar-container">
-                      <div className="progress-bar" style={{ width: `${audioProgress}%` }}></div>
+                      <div className="progress-bar" style={{ width: `${audioProgress}%` }} />
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
                       {audioProgressText}
@@ -553,77 +575,47 @@ function App() {
                 )}
               </div>
 
-              {/* Right Column: Processing Results */}
+              {/* Right: Results */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ marginBottom: '1rem' }}>Dubbing Results</h3>
-                
+                <div className="section-title">Dubbing Results</div>
+
                 {audioResult ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flexGrow: 1 }}>
                     <div className="tab-header">
-                      <button 
+                      <button
                         className={`tab-btn ${audioActiveSubTab === 'translation' ? 'active' : ''}`}
                         onClick={() => setAudioActiveSubTab('translation')}
-                      >
-                        Translated Dub
-                      </button>
-                      <button 
+                      >Translated Dub</button>
+                      <button
                         className={`tab-btn ${audioActiveSubTab === 'transcript' ? 'active' : ''}`}
                         onClick={() => setAudioActiveSubTab('transcript')}
-                      >
-                        Original Transcript
-                      </button>
+                      >Original Transcript</button>
                     </div>
 
                     {audioActiveSubTab === 'translation' ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flexGrow: 1 }}>
-                        <div 
-                          style={{ 
-                            background: 'rgba(255, 255, 255, 0.01)', 
-                            border: '1px solid var(--border-color)', 
-                            borderRadius: '8px', 
-                            padding: '1rem',
-                            minHeight: '150px',
-                            maxHeight: '220px',
-                            overflowY: 'auto',
-                            whiteSpace: 'pre-wrap',
-                            fontSize: '0.95rem'
-                          }}
-                        >
+                        <div className="output-box" style={{ minHeight: '130px', maxHeight: '200px' }}>
                           {audioResult.translated_text}
                         </div>
-
                         <div>
                           <label className="form-label" style={{ marginBottom: '0.25rem' }}>Dubbed Voice Audio</label>
                           <audio src={audioResult.translated_audio_url} controls className="custom-audio-player" style={{ marginTop: 0 }} />
                         </div>
                       </div>
                     ) : (
-                      <div 
-                        style={{ 
-                          background: 'rgba(255, 255, 255, 0.01)', 
-                          border: '1px solid var(--border-color)', 
-                          borderRadius: '8px', 
-                          padding: '1rem',
-                          minHeight: '200px',
-                          overflowY: 'auto',
-                          whiteSpace: 'pre-wrap',
-                          fontSize: '0.95rem'
-                        }}
-                      >
+                      <div className="output-box" style={{ minHeight: '200px' }}>
                         {audioResult.source_text}
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
-                      <a 
-                        className="btn btn-secondary" 
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: 'auto' }}>
+                      <a
+                        className="btn btn-secondary"
                         style={{ flex: 1, textDecoration: 'none' }}
-                        href={audioResult.translated_audio_url} 
-                        download={`dubbed_${audioTgtLang.lower()}_${audioFile.name}.wav`}
-                      >
-                        📥 Download Audio
-                      </a>
-                      <button 
+                        href={audioResult.translated_audio_url}
+                        download={`dubbed_${audioTgtLang}_${audioFile.name}.wav`}
+                      >📥 Download Audio</a>
+                      <button
                         className="btn btn-secondary"
                         style={{ flex: 1 }}
                         onClick={() => {
@@ -635,25 +627,13 @@ function App() {
                           link.download = `${audioActiveSubTab}_transcript.txt`;
                           link.click();
                         }}
-                      >
-                        📥 Download Text
-                      </button>
+                      >📥 Download Text</button>
                     </div>
                   </div>
                 ) : (
-                  <div 
-                    style={{ 
-                      flexGrow: 1, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: '1px dashed var(--border-color)',
-                      borderRadius: '12px',
-                      color: 'var(--text-muted)',
-                      minHeight: '250px'
-                    }}
-                  >
-                    No processed audio file yet. Upload and click dub!
+                  <div className="empty-state">
+                    <div className="empty-state-icon">🎵</div>
+                    <span>Upload an audio file and click Dub to get started.</span>
                   </div>
                 )}
               </div>
@@ -661,17 +641,19 @@ function App() {
           </div>
         )}
 
-        {/* Video Translation Tab */}
+        {/* ════════════════════════════════════════
+            VIDEO TRANSLATION TAB
+        ════════════════════════════════════════ */}
         {activeTab === 'video' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div className="glass-card translator-grid">
-              {/* Left Column: Dropzone and settings */}
+              {/* Left: Dropzone & Settings */}
               <div>
                 <div className="form-group">
-                  <label className="form-label">Translation Directions</label>
+                  <label className="form-label">Translation Direction</label>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>From</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>From</span>
                       <select className="select-control" value={videoSrcLang} onChange={(e) => setVideoSrcLang(e.target.value)}>
                         <option value="English">English</option>
                         <option value="Hindi">Hindi</option>
@@ -679,7 +661,7 @@ function App() {
                       </select>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>To</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>To</span>
                       <select className="select-control" value={videoTgtLang} onChange={(e) => setVideoTgtLang(e.target.value)}>
                         <option value="Hindi">Hindi</option>
                         <option value="Marathi">Marathi</option>
@@ -689,17 +671,15 @@ function App() {
                   </div>
                 </div>
 
-                <div 
+                <div
                   className="dropzone"
                   onClick={() => videoFileInputRef.current.click()}
                   style={{ padding: '2.5rem 2rem' }}
                 >
-                  <div className="dropzone-icon" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>🎬</div>
-                  <div style={{ fontWeight: 600 }}>Click to browse video files</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Supports MP4, MOV, AVI, WMV, MKV, FLV, WebM
-                  </div>
-                  <input 
+                  <div className="dropzone-icon">🎬</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click to browse video files</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Supports MP4, MOV, AVI, WMV, MKV, WebM</div>
+                  <input
                     type="file"
                     ref={videoFileInputRef}
                     style={{ display: 'none' }}
@@ -717,47 +697,47 @@ function App() {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.25rem' }}>
                   <div className="switch-container">
                     <div className="switch-label-group">
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Burn-in Subtitles</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Burn-in Subtitles</span>
                       <span className="switch-subtext">Renders translated text directly onto the video frames.</span>
                     </div>
                     <label className="switch">
                       <input type="checkbox" checked={burnSubtitles} onChange={(e) => setBurnSubtitles(e.target.checked)} />
-                      <span className="slider"></span>
+                      <span className="slider" />
                     </label>
                   </div>
 
                   <div className="switch-container">
                     <div className="switch-label-group">
-                      <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>Voice Dubbing Overlay</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Voice Dubbing Overlay</span>
                       <span className="switch-subtext">Overlay synthetic voiceover and mute original track.</span>
                     </div>
                     <label className="switch">
                       <input type="checkbox" checked={overlayVoice} onChange={(e) => setOverlayVoice(e.target.checked)} />
-                      <span className="slider"></span>
+                      <span className="slider" />
                     </label>
                   </div>
                 </div>
 
-                <button 
+                <button
                   className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '1.5rem' }}
+                  style={{ width: '100%', marginTop: '1.25rem' }}
                   disabled={!videoFile || isProcessingVideo}
                   onClick={processVideo}
                 >
-                  {isProcessingVideo ? 'Processing Video...' : '⚡ Process & Dub Video'}
+                  {isProcessingVideo ? '⏳ Processing Video...' : '⚡ Process & Dub Video'}
                 </button>
 
                 {isProcessingVideo && (
                   <div className="progress-panel">
                     <div className="progress-header">
-                      <div className="processing-pulse" style={{ color: '#8b5cf6' }}>Rendering...</div>
-                      <div style={{ fontSize: '0.85rem' }}>{videoProgress}%</div>
+                      <div className="processing-pulse">🎞️ Rendering...</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--baif-green-dark)' }}>{videoProgress}%</div>
                     </div>
                     <div className="progress-bar-container">
-                      <div className="progress-bar" style={{ width: `${videoProgress}%`, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' }}></div>
+                      <div className="progress-bar" style={{ width: `${videoProgress}%` }} />
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
                       {videoProgressText}
@@ -766,14 +746,14 @@ function App() {
                 )}
               </div>
 
-              {/* Right Column: Video Output */}
+              {/* Right: Video Output */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ marginBottom: '1rem' }}>Output Preview</h3>
+                <div className="section-title">Output Preview</div>
 
                 {videoResult ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flexGrow: 1 }}>
                     <video src={videoResult.video_url} controls className="custom-video-player" />
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                       <label className="form-label" style={{ marginBottom: '0.5rem' }}>Synchronized Subtitle Segments</label>
                       <div className="subtitle-editor">
@@ -783,7 +763,7 @@ function App() {
                           const text = lines.slice(2).join(' ') || '';
                           return (
                             <div className="subtitle-segment" key={idx}>
-                              <div className="sub-time">{timing.split(' --> ')[0].slice(3, 8)} ➔ {timing.split(' --> ')[1]?.slice(3, 8)}</div>
+                              <div className="sub-time">{timing.split(' --> ')[0]?.slice(3, 8)} ➔ {timing.split(' --> ')[1]?.slice(3, 8)}</div>
                               <div className="sub-text">{text}</div>
                             </div>
                           );
@@ -791,39 +771,25 @@ function App() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
-                      <a 
-                        className="btn btn-primary" 
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: 'auto' }}>
+                      <a
+                        className="btn btn-primary"
                         style={{ flex: 1, textDecoration: 'none' }}
-                        href={videoResult.video_url} 
-                        download={`translated_${videoTgtLang.lower()}_${videoFile.name}`}
-                      >
-                        📥 Download Video (.mp4)
-                      </a>
-                      <a 
-                        className="btn btn-secondary" 
+                        href={videoResult.video_url}
+                        download={`translated_${videoTgtLang}_${videoFile.name}`}
+                      >📥 Download Video (.mp4)</a>
+                      <a
+                        className="btn btn-secondary"
                         style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
-                        href={videoResult.srt_url} 
-                        download={`subtitles_${videoTgtLang.lower()}_${videoFile.name.split('.')[0]}.srt`}
-                      >
-                        📄 Download SRT Subs
-                      </a>
+                        href={videoResult.srt_url}
+                        download={`subtitles_${videoTgtLang}_${videoFile.name.split('.')[0]}.srt`}
+                      >📄 Download SRT Subs</a>
                     </div>
                   </div>
                 ) : (
-                  <div 
-                    style={{ 
-                      flexGrow: 1, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: '1px dashed var(--border-color)',
-                      borderRadius: '12px',
-                      color: 'var(--text-muted)',
-                      minHeight: '350px'
-                    }}
-                  >
-                    No processed video file yet. Upload and click dub!
+                  <div className="empty-state">
+                    <div className="empty-state-icon">🎬</div>
+                    <span>Upload a video file and click Process to get started.</span>
                   </div>
                 )}
               </div>
@@ -831,71 +797,83 @@ function App() {
           </div>
         )}
 
-        {/* Settings Tab */}
+        {/* ════════════════════════════════════════
+            SETTINGS TAB
+        ════════════════════════════════════════ */}
         {activeTab === 'settings' && (
           <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Whisper Model Size */}
             <div>
-              <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Offline Model Cache Config</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                Select preferred models sizing and verify files are cached locally for 100% offline air-gapped system.
+              <div className="section-title">Speech-to-Text Model Configuration</div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+                Select preferred Whisper model size for audio and video transcription.
+                Smaller models execute faster on CPU-only hardware.
               </p>
-
-              <div className="form-group" style={{ maxWidth: '400px' }}>
-                <label className="form-label">Speech-To-Text Whisper Size</label>
+              <div className="form-group" style={{ maxWidth: '440px' }}>
+                <label className="form-label">Whisper ASR Model Size</label>
                 <select className="select-control" value={whisperSize} onChange={(e) => setWhisperSize(e.target.value)}>
-                  <option value="tiny">Whisper Tiny (Fastest, ~75MB)</option>
-                  <option value="base">Whisper Base (Recommended Balanced, ~140MB)</option>
+                  <option value="tiny">Whisper Tiny — Fastest (~75MB)</option>
+                  <option value="base">Whisper Base — Recommended Balanced (~140MB)</option>
                 </select>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
-                  Smaller models execute dramatically faster on CPU-only machines.
-                </span>
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Offline Files Checklist</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', padding: '1.5rem', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🎙️ Speech-to-Text Model (Whisper)</span>
-                  <span style={{ fontWeight: 600, color: modelsStatus.whisper_cached ? 'var(--accent-success)' : '#f59e0b' }}>
-                    {modelsStatus.whisper_cached ? '✓ Cached Locally' : '✗ Missing / Cloud fetch'}
+            {/* Model Cache Checklist */}
+            <div style={{ borderTop: '1.5px solid var(--border-color)', paddingTop: '1.75rem' }}>
+              <div className="section-title">Offline Files Checklist</div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
+                Verify all model weights are cached locally for 100% offline, air-gapped operation.
+              </p>
+              <div className="checklist-card">
+                <div className="checklist-item">
+                  <span className="checklist-item-label">🎙️ Speech-to-Text Model (Whisper)</span>
+                  <span className={modelsStatus.whisper_cached ? 'status-ok' : 'status-warn'}>
+                    {modelsStatus.whisper_cached ? '✓ Cached Locally' : '✗ Missing / Cloud Fetch'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🔤 Text Translation Model (NLLB-200 600M)</span>
-                  <span style={{ fontWeight: 600, color: modelsStatus.nllb_cached ? 'var(--accent-success)' : '#f59e0b' }}>
-                    {modelsStatus.nllb_cached ? '✓ Cached Locally' : '✗ Missing / Cloud fetch'}
+                <div className="checklist-item">
+                  <span className="checklist-item-label">🔤 Text Translation Model (NLLB-200 600M)</span>
+                  <span className={modelsStatus.nllb_cached ? 'status-ok' : 'status-warn'}>
+                    {modelsStatus.nllb_cached ? '✓ Cached Locally' : '✗ Missing / Cloud Fetch'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>🔊 Text-to-Speech regional Synthesizers (MMS-TTS)</span>
-                  <span style={{ fontWeight: 600, color: modelsStatus.tts_cached ? 'var(--accent-success)' : '#f59e0b' }}>
-                    {modelsStatus.tts_cached ? '✓ Cached Locally' : '✗ Missing / Cloud fetch'}
+                <div className="checklist-item">
+                  <span className="checklist-item-label">🔊 Text-to-Speech Synthesizers (MMS-TTS)</span>
+                  <span className={modelsStatus.tts_cached ? 'status-ok' : 'status-warn'}>
+                    {modelsStatus.tts_cached ? '✓ Cached Locally' : '✗ Missing / Cloud Fetch'}
                   </span>
                 </div>
-                
                 {modelsStatus.models_dir && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                    **Cache Storage Path**: `{modelsStatus.models_dir}`
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.875rem', marginTop: '0.25rem' }}>
+                    📁 Cache path: <code style={{ background: 'var(--baif-green-pale)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.8rem' }}>{modelsStatus.models_dir}</code>
                   </div>
                 )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={checkServerStatus}>🔄 Refresh Status</button>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => {
-                  alert("To pre-download all files for fully offline use, run the download script:\n\npython backend/download_models.py");
-                }}
-              >
-                📦 Pre-download offline weights instructions
-              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => alert('To pre-download all files for fully offline use, run the download script:\n\npython backend/download_models.py')}
+              >📦 Pre-download Offline Weights</button>
             </div>
           </div>
         )}
       </div>
+
+      {/* ── Footer ── */}
+      <footer className="app-footer">
+        <div className="footer-brand">
+          <span>🌾</span>
+          BAIF Development Research Foundation
+        </div>
+        <div className="footer-copy">
+          Offline AI Translation Portal · BAIF Bhavan, Warje, Pune 411058 · baif@baif.org.in
+        </div>
+        <div className="footer-copy">© {new Date().getFullYear()} BAIF. All rights reserved.</div>
+      </footer>
     </div>
   );
 }
