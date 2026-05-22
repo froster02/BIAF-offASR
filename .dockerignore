@@ -1,0 +1,25 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Node dependencies and builds
+**/node_modules/
+frontend/dist/
+
+# Local cache & temporary files
+backend/models/
+backend/temp/
+backend/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.git/
+.gitignore
+.DS_Store
+
+# Scratch/System data
+.gemini/
+scratch/
+brain/
+*.log

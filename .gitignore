@@ -1,0 +1,23 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python caches & temporary workspaces
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/temp/
+*.log
+
+# OS temporary files
+.DS_Store
+Thumbs.db
+
+# Offline AI Model weights (Baked in during Docker build, must ignore in Git!)
+backend/models/
+
+# Node dependencies and compiled builds
+**/node_modules/
+frontend/dist/
