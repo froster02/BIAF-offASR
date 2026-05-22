@@ -35,11 +35,20 @@ RUN python backend/download_models.py backend/models
 # Copy the built React assets from Stage 1 into the backend's static folder
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Expose port 8000
-EXPOSE 8000
+# Create a non-root user with UID 1000 (standard for Hugging Face Spaces) and set directory ownerships
+RUN useradd -m -u 1000 user && \
+    chown -R 1000:1000 /app
 
-# Set environment variable for port (Railway passes PORT env)
-ENV PORT=8000
+# Switch to the non-root user
+USER user
+ENV PATH="/home/user/.local/bin:$PATH"
+
+# Expose port 7860
+EXPOSE 7860
+
+# Set environment variable for port (Hugging Face Spaces passes PORT=7860, defaults to 7860)
+ENV PORT=7860
 
 # Start Uvicorn serving both backend endpoints and compiled static UI
 CMD ["sh", "-c", "uvicorn app:app --app-dir backend --host 0.0.0.0 --port ${PORT}"]
+
