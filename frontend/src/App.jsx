@@ -351,14 +351,6 @@ function App() {
                   <div className="hero-stat-value">3</div>
                   <div className="hero-stat-label">Indian Languages</div>
                 </div>
-                <div className="hero-stat">
-                  <div className="hero-stat-value">100%</div>
-                  <div className="hero-stat-label">Offline Capable</div>
-                </div>
-                <div className="hero-stat">
-                  <div className="hero-stat-value">0</div>
-                  <div className="hero-stat-label">API Fees</div>
-                </div>
               </div>
             </div>
 
@@ -808,6 +800,21 @@ function App() {
                   <option value="tiny">Whisper Tiny — Fastest (~75MB)</option>
                   <option value="base">Whisper Base — Recommended Balanced (~140MB)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* System Performance & Cost */}
+            <div style={{ borderTop: '1.5px solid var(--border-color)', paddingTop: '1.75rem' }}>
+              <div className="section-title">System Performance & Cost</div>
+              <div className="capabilities-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                <div className="system-info-card" style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--green-dark)' }}>100%</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Offline Capable</div>
+                </div>
+                <div className="system-info-card" style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--green-dark)' }}>0</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>API Fees</div>
+                </div>
               </div>
             </div>
 
