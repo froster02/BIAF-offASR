@@ -21,10 +21,11 @@ The system is fully deployed on **Hugging Face Spaces** as a free hosting soluti
 
 ---
 
-## 📸 Presentation Pitch Deck
+## 📸 Application Preview
 
-We have created an extensive, professional 16:9 dark-theme widescreen pitch presentation outlining the problem space, local constraints, architecture, hardware setup, engineering breakthroughs, and rural impact for the competition judges:
+![Offline Translation Portal](frontend/src/assets/hero.png)
 
+The portal features a high-fidelity glassmorphic dark UI designed for fluid, responsive interactions on consumer hardware.
 
 ---
 

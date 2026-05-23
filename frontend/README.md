@@ -1,12 +1,12 @@
-# 🎨 BAIF Offline Translation Portal — React Frontend
+# 🎨 Offline Translation Portal — React Frontend
 
-This is the premium React user interface for the **BAIF CSR Offline Translation System**. Built with **React 19** and **Vite 8**, it implements an elegant, high-fidelity **glassmorphic dark UI** designed to offer a fluid, responsive, and tactile experience for rural field officers and translators.
+This is the premium React user interface for the **Offline AI Translation System**. Built with **React 19** and **Vite 8**, it implements an elegant, high-fidelity **glassmorphic dark UI** designed to offer a fluid, responsive, and tactile experience for rural field officers and translators.
 
 ---
 
 ## 🔮 Aesthetics & Styling Principles
 
-The interface uses pure **Vanilla CSS** (configured inside [`src/index.css`](file:///Users/arushnaudiyal/Documents/GitHub%20Projects/BAIF/frontend/src/index.css)) following state-of-the-art visual design practices:
+The interface uses pure **Vanilla CSS** (configured inside [`src/index.css`](src/index.css)) following state-of-the-art visual design practices:
 * **Harmonious Dark Theme**: Uses curated deep slate background colors (`#0a0e17` and `#121824`) blended with soft indigo and violet radial gradients (`radial-gradient`) to give the app a premium, high-tech glow that reduces eye strain.
 * **Glassmorphic Cards**: Implements translucent white layers (`rgba(18, 24, 38, 0.7)`) with a custom `backdrop-filter: blur(16px)` and ultra-subtle border outlines (`rgba(255, 255, 255, 0.08)`), making panels appear suspended.
 * **Micro-Animations & Transitions**: Interactive states, buttons, dropzones, and sidebar navigation items feature smooth cubic-bezier transitions (`all 0.3s cubic-bezier(0.4, 0, 0.2, 1)`) and elegant lift behaviors.
@@ -17,11 +17,11 @@ The interface uses pure **Vanilla CSS** (configured inside [`src/index.css`](fil
 
 ## 🧩 Interface Structure & Live Modules
 
-The entire application runs as a cohesive Single Page Application (SPA) inside [`src/App.jsx`](file:///Users/arushnaudiyal/Documents/GitHub%20Projects/BAIF/frontend/src/App.jsx):
+The entire application runs as a cohesive Single Page Application (SPA) inside [`src/App.jsx`](src/App.jsx):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  BAIF brand   │  Header: Title & Subtitle                  │
+│  Branding    │  Header: Title & Subtitle                   │
 ├───────────────┼─────────────────────────────────────────────┤
 │  Navigation   │                                             │
 │  - Video Dub  │  Interactive Grid Panels                    │
