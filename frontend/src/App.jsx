@@ -402,24 +402,6 @@ function App() {
                     <li>2.42x batch translation speedup via vectorized NLLB padding on Apple Silicon MPS.</li>
                   </ul>
                 </div>
-
-                <div className="section-title" style={{ marginTop: '0.5rem' }}>Offline Node Status</div>
-                <div className="system-info-card">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                    <div className="checklist-item">
-                      <span className="checklist-item-label">🖥️ Backend Server</span>
-                      <span className={isConnected ? 'status-ok' : 'status-warn'}>
-                        {isConnected ? '✓ Connected' : '✗ Offline'}
-                      </span>
-                    </div>
-                    <div className="checklist-item">
-                      <span className="checklist-item-label">📦 Model Cache</span>
-                      <span className={modelsStatus.is_cached ? 'status-ok' : 'status-warn'}>
-                        {modelsStatus.is_cached ? '✓ Pre-cached' : '⚠ Cloud Fetch'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -831,27 +813,39 @@ function App() {
 
             {/* Model Cache Checklist */}
             <div style={{ borderTop: '1.5px solid var(--border-color)', paddingTop: '1.75rem' }}>
-              <div className="section-title">Offline Files Checklist</div>
+              <div className="section-title">Offline Node Status</div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
                 Verify all model weights are cached locally for 100% offline, air-gapped operation.
               </p>
               <div className="checklist-card">
                 <div className="checklist-item">
-                  <span className="checklist-item-label">🎙️ Speech-to-Text Model (Whisper)</span>
-                  <span className={modelsStatus.whisper_cached ? 'status-ok' : 'status-warn'}>
-                    {modelsStatus.whisper_cached ? '✓ Cached Locally' : '✗ Missing / Cloud Fetch'}
+                  <span className="checklist-item-label">🖥️ Backend Server</span>
+                  <span className={isConnected ? 'status-ok' : 'status-warn'}>
+                    {isConnected ? '✓ Connected' : '✗ Offline'}
                   </span>
                 </div>
                 <div className="checklist-item">
-                  <span className="checklist-item-label">🔤 Text Translation Model (NLLB-200 600M)</span>
+                  <span className="checklist-item-label">📦 Model Cache</span>
+                  <span className={modelsStatus.is_cached ? 'status-ok' : 'status-warn'}>
+                    {modelsStatus.is_cached ? '✓ Pre-cached' : '⚠ Cloud Fetch'}
+                  </span>
+                </div>
+                <div className="checklist-item" style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', borderRadius: 0, borderLeft: 0, borderRight: 0, borderBottom: 0 }}>
+                  <span className="checklist-item-label">🎙️ Speech-to-Text Model (Whisper)</span>
+                  <span className={modelsStatus.whisper_cached ? 'status-ok' : 'status-warn'}>
+                    {modelsStatus.whisper_cached ? '✓ Cached Locally' : '✗ Missing'}
+                  </span>
+                </div>
+                <div className="checklist-item">
+                  <span className="checklist-item-label">🔤 Text Translation Model (NLLB-200)</span>
                   <span className={modelsStatus.nllb_cached ? 'status-ok' : 'status-warn'}>
-                    {modelsStatus.nllb_cached ? '✓ Cached Locally' : '✗ Missing / Cloud Fetch'}
+                    {modelsStatus.nllb_cached ? '✓ Cached Locally' : '✗ Missing'}
                   </span>
                 </div>
                 <div className="checklist-item">
                   <span className="checklist-item-label">🔊 Text-to-Speech Synthesizers (MMS-TTS)</span>
                   <span className={modelsStatus.tts_cached ? 'status-ok' : 'status-warn'}>
-                    {modelsStatus.tts_cached ? '✓ Cached Locally' : '✗ Missing / Cloud Fetch'}
+                    {modelsStatus.tts_cached ? '✓ Cached Locally' : '✗ Missing'}
                   </span>
                 </div>
                 {modelsStatus.models_dir && (
