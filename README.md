@@ -175,6 +175,12 @@ This monorepo is fully prepared for zero-cost, continuous deployment on **Huggin
    git push -f hf main
    ```
 3. **Automatic Deployment Build**:
-   * Hugging Face will automatically detect the root `Dockerfile`.
-   * It builds Stage 1 (React static assets compilation) and Stage 2 (installs Python 3.11, packages, upgrades to PyTorch 2.6.0, and downloads all models).
-   * Once complete, the Space will transition to `RUNNING` and expose your secure application portal publicly!
+    * Hugging Face will automatically detect the root `Dockerfile`.
+    * It builds Stage 1 (React static assets compilation) and Stage 2 (installs Python 3.11, packages, upgrades to PyTorch 2.6.0, and downloads all models).
+    * Once complete, the Space will transition to `RUNNING` and expose your secure application portal publicly!
+
+---
+
+## 📄 License
+
+This project is licensed under the GNU AGPLv3. See `LICENSE` for details.
