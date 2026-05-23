@@ -110,7 +110,8 @@ async def transcribe_audio(
     session_dir = os.path.join(TEMP_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
     
-    file_ext = os.path.splitext(file.filename)[1].lower()
+    filename = file.filename or "unknown"
+    file_ext = os.path.splitext(filename)[1].lower()
     input_path = os.path.join(session_dir, f"input{file_ext}")
     
     # Save uploaded file
@@ -164,7 +165,8 @@ async def translate_audio(
     session_dir = os.path.join(TEMP_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
     
-    file_ext = os.path.splitext(file.filename)[1].lower()
+    filename = file.filename or "unknown"
+    file_ext = os.path.splitext(filename)[1].lower()
     input_path = os.path.join(session_dir, f"input{file_ext}")
     
     with open(input_path, "wb") as buffer:
@@ -268,7 +270,8 @@ async def process_video(
     session_dir = os.path.join(TEMP_DIR, session_id)
     os.makedirs(session_dir, exist_ok=True)
     
-    file_ext = os.path.splitext(file.filename)[1].lower()
+    filename = file.filename or "unknown"
+    file_ext = os.path.splitext(filename)[1].lower()
     input_path = os.path.join(session_dir, f"input{file_ext}")
     
     with open(input_path, "wb") as buffer:
