@@ -378,6 +378,6 @@ def download_file(session_id: str, filename: str):
 frontend_dist = os.path.abspath(os.path.join(BASE_DIR, "../frontend/dist"))
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
-    print(f"[*] Mounted static frontend files from: {frontend_dist}")
-else:
-    print("[!] Frontend distribution folder not found. Serving API endpoints only.")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
