@@ -42,7 +42,7 @@ function App() {
   const [videoProgress, setVideoProgress] = useState(0);
   const [videoProgressText, setVideoProgressText] = useState('');
   const [videoResult, setVideoResult] = useState(null);
-  const videoFileInputRef = useRef(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Fetch model status from server
   const checkServerStatus = async () => {
@@ -274,20 +274,31 @@ function App() {
         <div className="navbar-brand">
           <div className="navbar-logo">🌾</div>
           <div className="navbar-title">
-                        <span className="navbar-title-main">OfflineASR</span>
+            <span className="navbar-title-main">OfflineASR</span>
             <span className="navbar-title-sub">Offline AI Translation</span>
           </div>
         </div>
 
+        <button 
+          className="mobile-menu-toggle"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {isMenuOpen ? '✕' : '☰'}
+        </button>
+
         <div className="navbar-divider" />
 
         {/* Nav Links */}
-        <div className="nav-links">
+        <div className={`nav-links ${isMenuOpen ? 'open' : ''}`}>
           {navItems.map(item => (
             <button
               key={item.id}
               className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                setIsMenuOpen(false);
+              }}
             >
               <span className="nav-icon">{item.icon}</span>
               {item.label}
@@ -298,7 +309,7 @@ function App() {
         {/* Connection Status */}
         <div className={`navbar-status ${isConnected ? 'online' : 'offline'}`}>
           <span className={`dot ${isConnected ? '' : 'offline'}`} />
-          {isConnected ? 'Connected' : 'Offline'}
+          <span className="status-text">{isConnected ? 'Connected' : 'Offline'}</span>
         </div>
       </nav>
 
