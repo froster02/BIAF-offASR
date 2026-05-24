@@ -1,0 +1,32 @@
+name: BIAF Docker Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  docker:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build \
+        --tag biaf-offasr:latest \
+        .
+
+    - name: Verify Docker image
+      run: |
+        docker images
