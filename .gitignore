@@ -1,23 +1,96 @@
-# Virtual environments
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 venv/
 .venv/
-env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 
-# Python caches & temporary workspaces
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# --- ML/Data ---
+# Ignore model weights and large datasets
+backend/models/
+*.pt
+*.pth
+*.onnx
+*.bin
+*.model
+*.ckpt
+*.joblib
+*.h5
+*.pb
+
+# --- Project Specific ---
 backend/temp/
 *.log
+server.log
+nohup.out
 
-# OS temporary files
-.DS_Store
-Thumbs.db
+# --- Audio/Video Artifacts ---
+# Ignore generated media outputs
+*.wav
+*.mp3
+*.mp4
+*.m4a
+*.srt
+*.vtt
 
-# Offline AI Model weights (Baked in during Docker build, must ignore in Git!)
-backend/models/
-
-# Node dependencies and compiled builds
+# --- Node/Frontend ---
+node_modules/
 **/node_modules/
 frontend/dist/
+.npm
+.eslintcache
+
+# --- Secrets ---
+.env
+.env.*
+.secrets
+*.pem
+*.key
+
+# --- IDE/Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

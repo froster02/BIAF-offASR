@@ -1,25 +1,47 @@
-# Virtual environments
+# Git & CI
+.git/
+.github/
+.gitignore
+.dockerignore
+.cursorignore
+README.md
+SECURITY.md
+
+# Environments
 venv/
 .venv/
 env/
-
-# Node dependencies and builds
 **/node_modules/
-frontend/dist/
 
-# Local cache & temporary files
-backend/models/
-backend/temp/
-backend/__pycache__/
+# Python artifacts
+**/__pycache__/
 **/*.pyc
 **/*.pyo
 **/*.pyd
-.git/
-.gitignore
-.DS_Store
 
-# Scratch/System data
-.gemini/
-scratch/
-brain/
+# Project artifacts
+backend/models/
+backend/temp/
+frontend/dist/
+frontend/node_modules/
 *.log
+server.log
+
+# Large files & Cache
+.cache/
+.pytest_cache/
+.npm/
+*.pt
+*.onnx
+*.wav
+*.mp3
+*.mp4
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/

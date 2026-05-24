@@ -1,0 +1,34 @@
+# Ignore large binary/model assets
+backend/models/
+*.pt
+*.onnx
+*.bin
+*.model
+*.ckpt
+
+# Ignore environments & dependencies
+venv/
+.venv/
+node_modules/
+**/node_modules/
+
+# Ignore sensitive data
+.env
+.env.*
+.secrets
+
+# Ignore temporary/generated files
+backend/temp/
+frontend/dist/
+*.log
+*.wav
+*.mp3
+*.mp4
+*.srt
+*.vtt
+
+# Ignore caches
+__pycache__/
+.cache/
+.pytest_cache/
+.npm/
