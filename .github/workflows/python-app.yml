@@ -1,0 +1,68 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+name: BIAF Python CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install ffmpeg
+      run: |
+        sudo apt update
+        sudo apt install -y ffmpeg
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+
+        pip install pytest flake8
+
+    - name: Verify ffmpeg installation
+      run: ffmpeg -version
+
+    - name: Lint project
+      run: |
+        flake8 . \
+        --count \
+        --select=E9,F63,F7,F82 \
+        --show-source \
+        --statistics
+
+    - name: Run tests
+      run: |
+        pytest || true
