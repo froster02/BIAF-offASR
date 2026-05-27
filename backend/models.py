@@ -140,6 +140,22 @@ class ModelManager:
         if not text.strip():
             return ""
             
+        # Map languages to NLLB-200 code
+        lang_codes = {
+            "Marathi": "mar_Deva",
+            "Hindi": "hin_Deva",
+            "English": "eng_Latn"
+        }
+        
+        src_code = lang_codes.get(src_lang)
+        tgt_code = lang_codes.get(tgt_lang)
+        
+        if not src_code or not tgt_code:
+            raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
+            
+        if src_lang == tgt_lang:
+            return text
+
         if self.ci_mode:
             return f"[CI MOCK] {tgt_lang}: {text}"
             
@@ -184,6 +200,22 @@ class ModelManager:
         if not texts:
             return []
             
+        # Map languages to NLLB-200 code
+        lang_codes = {
+            "Marathi": "mar_Deva",
+            "Hindi": "hin_Deva",
+            "English": "eng_Latn"
+        }
+        
+        src_code = lang_codes.get(src_lang)
+        tgt_code = lang_codes.get(tgt_lang)
+        
+        if not src_code or not tgt_code:
+            raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
+            
+        if src_lang == tgt_lang:
+            return texts
+
         if self.ci_mode:
             return [f"[CI MOCK] {tgt_lang}: {t}" if t.strip() else t for t in texts]
             
@@ -253,6 +285,10 @@ class ModelManager:
         if not text.strip():
             raise ValueError("Empty text provided for TTS")
             
+        supported_langs = ["Hindi", "Marathi", "English"]
+        if lang not in supported_langs:
+            raise ValueError(f"Unsupported TTS language: {lang}")
+
         if self.ci_mode:
             # Generate a small dummy wav file (1 second of silence at 16kHz)
             print(f"[*] [CI MOCK] Generating dummy TTS for {lang}...")
