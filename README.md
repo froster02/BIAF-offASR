@@ -10,10 +10,12 @@ pinned: false
 
 # 🌾 BIAF-offASR: Offline Translation Portal
 
+[![CI/CD Pipeline](https://github.com/froster02/BIAF-offASR/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/froster02/BIAF-offASR/actions/workflows/ci-cd.yml)
 [![Offline First](https://img.shields.io/badge/Offline--First-Zero--Network-emerald?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
 [![Hardware Accelerated](https://img.shields.io/badge/PyTorch-MPS%20%2F%20CUDA%20Accelerated-indigo?style=for-the-badge)](https://github.com/froster02/BIAF-offASR)
 [![License](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](https://github.com/froster02/BIAF-offASR/blob/main/LICENSE)
 [![Security Policy](https://img.shields.io/badge/Security-Hardened-red?style=for-the-badge)](SECURITY.md)
+[![Python 3.10](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 
 A local-first, zero-network platform built to process translation, subtitling, and voice dubbing for agricultural and rural development. Supporting **Hindi**, **Marathi**, and **English**, it is designed for field officers working in areas with limited or no connectivity.
 
@@ -70,6 +72,7 @@ graph TD
 *   **⚡ Vectorized Batching**: 2.4x speedup in translation latency by processing segments in parallel.
 *   **🔒 Thread Safety**: Implemented `RLock` protections for stable multi-user inference on Apple Silicon (MPS).
 *   **🛡️ Repository Hygiene**: Comprehensive `.gitignore`, `.dockerignore`, and `.cursorignore` patterns prevent ML weight bloat and security leaks.
+*   **🔄 CI/CD Pipeline**: Automated testing via GitHub Actions — runs backend unit tests, frontend linting/build, E2E Playwright tests, and code quality checks on every push and pull request.
 *   **⚖️ License Compliance**: Licensed under **AGPLv3** with built-in local-only warning banners for deployment transparency.
 
 ---
@@ -104,6 +107,40 @@ Verify your local setup by running the backend regression suite:
 python backend/test_pipeline.py
 ```
 This checks hardware acceleration, translation quality, and TTS audio synthesis.
+
+---
+
+## 🧪 Testing & CI/CD
+
+The project includes a robust testing pipeline to ensure stability and performance.
+
+### 🛡️ Local Safety Net
+A **pre-push git hook** is included to run basic checks locally before pushing code to GitHub.
+*   **Backend**: Runs unit tests and pipeline validation in `CI_MODE`.
+*   **Frontend**: Runs ESLint to maintain code quality.
+
+To enable the pre-push hook (if not already active):
+```bash
+chmod +x .git/hooks/pre-push
+```
+
+### 🤖 CI Mock Mode
+To avoid downloading large AI models (3GB+) in CI environments, the backend supports a `CI_MODE`. When `CI_MODE=true` is set:
+*   Heavy ML inference is bypassed.
+*   The system returns deterministic mock results for translation, transcription, and TTS.
+*   Tests complete in seconds rather than minutes.
+
+### 🎭 End-to-End (E2E) Tests
+Comprehensive E2E tests are implemented using **Playwright**. These tests verify the entire application flow:
+1.  Backend & Frontend initialization.
+2.  Navigation and UI state changes.
+3.  End-to-end translation requests (using mock results in CI).
+
+Run E2E tests locally:
+```bash
+export CI_MODE=true
+pytest testcase/e2e/test_app_flow.py
+```
 
 ---
 
