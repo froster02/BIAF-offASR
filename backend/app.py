@@ -7,7 +7,10 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-import models
+try:
+    from . import models
+except (ImportError, ValueError):
+    import models
 import subtitles
 
 app = FastAPI(title="Offline Translation API", version="1.0.0")
