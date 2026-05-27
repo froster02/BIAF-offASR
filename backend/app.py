@@ -11,7 +11,10 @@ try:
     from . import models
 except (ImportError, ValueError):
     import models
-import subtitles
+try:
+    from . import subtitles
+except (ImportError, ValueError):
+    import subtitles
 
 app = FastAPI(title="Offline Translation API", version="1.0.0")
 

@@ -60,7 +60,7 @@ def test_full_app_flow():
             # Perform a translation
             print("Testing translation UI...")
             page.fill("textarea", "Hello world")
-            page.click("button:has-text('Translate')")
+            page.click("button:has-text('Translate Text')")
             
             # Wait for result to appear
             print("Waiting for translation result...")

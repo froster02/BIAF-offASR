@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -43,6 +43,7 @@ function App() {
   const [videoProgressText, setVideoProgressText] = useState('');
   const [videoResult, setVideoResult] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const videoFileInputRef = useRef(null);
 
   // Fetch model status from server
   const checkServerStatus = async () => {
@@ -55,15 +56,18 @@ function App() {
       } else {
         setIsConnected(false);
       }
-    } catch (e) {
+    } catch {
       setIsConnected(false);
     }
   };
 
   useEffect(() => {
-    checkServerStatus();
+    const timeout = setTimeout(checkServerStatus, 0);
     const interval = setInterval(checkServerStatus, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, []);
 
   // Handle Text Translation
@@ -87,7 +91,7 @@ function App() {
       } else {
         alert('Translation failed. Please make sure the backend is running and models are loaded.');
       }
-    } catch (e) {
+    } catch {
       alert('Network error connecting to backend.');
     } finally {
       setIsTranslatingText(false);
@@ -114,7 +118,7 @@ function App() {
       } else {
         alert('TTS Synthesis failed.');
       }
-    } catch (e) {
+    } catch {
       alert('Error generating TTS.');
     } finally {
       setIsGeneratingTts(false);
@@ -168,7 +172,7 @@ function App() {
         alert('Audio processing failed. Check backend logs.');
         setIsProcessingAudio(false);
       }
-    } catch (e) {
+    } catch {
       alert('Error connecting to backend.');
       setIsProcessingAudio(false);
     } finally {
@@ -229,7 +233,7 @@ function App() {
         alert('Video processing failed. Verify that FFmpeg is installed.');
         setIsProcessingVideo(false);
       }
-    } catch (e) {
+    } catch {
       alert('Error connecting to video processing endpoint.');
       setIsProcessingVideo(false);
     } finally {
