@@ -1,8 +1,16 @@
 import pytest
 import os
+import sys
 import shutil
 import tempfile
 from unittest.mock import MagicMock, patch
+
+# Ensure backend is in path
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+import backend
+import backend.models
 from backend.models import ModelManager
 
 @pytest.fixture

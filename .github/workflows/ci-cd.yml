@@ -1,0 +1,176 @@
+name: BIAF-offASR CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'diagram/**'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'diagram/**'
+
+env:
+  CI_MODE: "true"
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          
+      - name: Install FFmpeg
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg
+          
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          
+      - name: Run backend unit tests
+        run: |
+          pytest testcase/backend/ -v
+          
+      - name: Run backend pipeline test (Mocked)
+        run: |
+          python backend/test_pipeline.py
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+          
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+        
+      - name: Run frontend linting
+        working-directory: frontend
+        run: npm run lint
+        
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  e2e-tests:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg
+          pip install -r backend/requirements.txt
+          npm ci --prefix frontend
+          
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        
+      - name: Start backend server
+        run: |
+          cd backend
+          nohup python app.py > backend.log 2>&1 &
+          echo $! > ../backend.pid
+          sleep 5
+          
+      - name: Start frontend server
+        run: |
+          cd frontend
+          nohup npm run dev > frontend.log 2>&1 &
+          echo $! > ../frontend.pid
+          sleep 10
+          
+      - name: Run E2E tests
+        run: |
+          pytest testcase/e2e/test_app_flow.py -v
+          
+      - name: Stop servers
+        if: always()
+        run: |
+          [ -f backend.pid ] && kill $(cat backend.pid) || true
+          [ -f frontend.pid ] && kill $(cat frontend.pid) || true
+          
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: |
+            backend/backend.log
+            frontend/frontend.log
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          
+      - name: Run backend linting
+        run: |
+          pip install flake8
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          
+      - name: Run Python complexity analysis
+        run: |
+          pip install radon
+          radon cc backend/ -a -s
+          radon mi backend/ -s
+
+  # Docker build (without pushing for now as secrets aren't set)
+  docker-build:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: biaf-offasr:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

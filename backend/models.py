@@ -17,16 +17,19 @@ class ModelManager:
         self.cache_dir = os.path.abspath(cache_dir)
         os.environ["HF_HOME"] = os.path.join(self.cache_dir, "hf_cache")
         self.lock = threading.RLock() # Reentrant lock for concurrent requests safety
+        self.ci_mode = os.environ.get("CI_MODE", "false").lower() == "true"
         
         # Select device automatically
-        if torch.cuda.is_available():
+        if self.ci_mode:
+            self.device = "cpu"
+        elif torch.cuda.is_available():
             self.device = "cuda"
         elif torch.backends.mps.is_available():
             self.device = "mps"
         else:
             self.device = "cpu"
             
-        print(f"[*] ModelManager initialized using device: {self.device}")
+        print(f"[*] ModelManager initialized using device: {self.device} (CI_MODE={self.ci_mode})")
         
         # Lazy load containers
         self.whisper_pipe = {}
@@ -84,6 +87,14 @@ class ModelManager:
             return self.tts_models[lang], self.tts_tokenizers[lang]
 
     def transcribe(self, audio_path, size="base", language="English"):
+        if self.ci_mode:
+            return {
+                "text": "This is a mock transcription for CI mode.",
+                "segments": [
+                    {"start": 0.0, "end": 2.0, "text": "This is a mock"},
+                    {"start": 2.0, "end": 4.0, "text": "transcription for CI mode."}
+                ]
+            }
         with self.lock:
             # Map human language name to Whisper code
             lang_code = {
@@ -129,6 +140,9 @@ class ModelManager:
         if not text.strip():
             return ""
             
+        if self.ci_mode:
+            return f"[CI MOCK] {tgt_lang}: {text}"
+            
         # Map languages to NLLB-200 code
         lang_codes = {
             "Marathi": "mar_Deva",
@@ -169,6 +183,9 @@ class ModelManager:
     def translate_batch(self, texts, src_lang, tgt_lang):
         if not texts:
             return []
+            
+        if self.ci_mode:
+            return [f"[CI MOCK] {tgt_lang}: {t}" if t.strip() else t for t in texts]
             
         # Map languages to NLLB-200 code
         lang_codes = {
@@ -236,6 +253,13 @@ class ModelManager:
         if not text.strip():
             raise ValueError("Empty text provided for TTS")
             
+        if self.ci_mode:
+            # Generate a small dummy wav file (1 second of silence at 16kHz)
+            print(f"[*] [CI MOCK] Generating dummy TTS for {lang}...")
+            dummy_data = np.zeros(16000)
+            sf.write(output_path, dummy_data, 16000)
+            return output_path
+
         with self.lock:
             model, tokenizer = self.get_tts(lang)
             print(f"[*] Synthesizing speech for text in {lang}...")

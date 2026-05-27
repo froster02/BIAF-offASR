@@ -6,11 +6,17 @@ from playwright.sync_api import sync_playwright
 
 def test_full_app_flow():
     # 1. Start backend
+    backend_env = os.environ.copy()
+    backend_env["CI_MODE"] = "true"
+    
+    python_path = "./venv/bin/python3" if os.path.exists("./venv/bin/python3") else "python3"
+    
     backend_proc = subprocess.Popen(
-        ["./venv/bin/python3", "backend/app.py"],
+        [python_path, "backend/app.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        preexec_fn=os.setsid
+        preexec_fn=os.setsid,
+        env=backend_env
     )
     
     # 2. Start frontend (Vite)
@@ -43,23 +49,22 @@ def test_full_app_flow():
             # Navigate to Settings
             print("Checking Settings...")
             page.click("text=Settings")
-            page.wait_for_timeout(2000)
+            page.wait_for_selector("text=Offline Node Status", timeout=10000)
             assert "Offline Node Status" in page.content()
             
             # Navigate to Text Translate
             print("Checking Text Translate...")
             page.click("text=Text Translate")
-            page.wait_for_timeout(1000)
+            page.wait_for_selector("textarea", timeout=5000)
             
             # Perform a translation
             print("Testing translation UI...")
             page.fill("textarea", "Hello world")
             page.click("button:has-text('Translate')")
             
-            # Wait for result (NLLB is fast)
-            page.wait_for_timeout(3000)
-            # Check if result area updated (assuming it shows translated text)
-            print("Translation triggered.")
+            # Wait for result to appear
+            print("Waiting for translation result...")
+            page.wait_for_selector("text=[CI MOCK]", timeout=10000)
             
             browser.close()
             
