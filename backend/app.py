@@ -6,10 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from langdetect import detect, DetectorFactory
-
-# Set seed for reproducible language detection
-DetectorFactory.seed = 0
+try:
+    from langdetect import detect, DetectorFactory
+    DetectorFactory.seed = 0
+except ImportError:
+    def detect(text: str) -> str:
+        return "en"
 
 try:
     from . import models
@@ -259,10 +261,14 @@ async def translate_audio(
             language=src_lang
         )
         
+        actual_src = transcription_result.get("detected_language")
+        if not actual_src or actual_src.lower() == "auto":
+            actual_src = "English"
+
         # Translate the full text
         translated_text = model_manager.translate(
             text=transcription_result["text"],
-            src_lang=src_lang,
+            src_lang=actual_src,
             tgt_lang=tgt_lang
         )
         
@@ -270,7 +276,7 @@ async def translate_audio(
         seg_texts = [seg["text"] for seg in transcription_result["segments"]]
         translated_texts = model_manager.translate_batch(
             texts=seg_texts,
-            src_lang=src_lang,
+            src_lang=actual_src,
             tgt_lang=tgt_lang
         )
         
@@ -286,14 +292,22 @@ async def translate_audio(
         translated_srt = subtitles.generate_srt(translated_segments)
         translated_vtt = subtitles.generate_vtt(translated_segments)
         
-        # Generate translated TTS audio for the output text
+        # Still generate full text for UI results
+        full_translated_text = " ".join([seg["text"] for seg in translated_segments])
+        
+        # Merge audio segments if it was requested
         tts_output_filename = f"tts_{tgt_lang.lower()}.wav"
         tts_output_path = os.path.join(session_dir, tts_output_filename)
-        model_manager.text_to_speech(translated_text, tgt_lang, tts_output_path)
+        
+        # Use synchronized merge for audio translation as well
+        subtitles.merge_audio_segments(translated_segments, session_dir, model_manager, tgt_lang)
+        # The merge_audio_segments returns 'combined_audio.wav' in session_dir, let's rename it to expected name
+        if os.path.exists(os.path.join(session_dir, "combined_audio.wav")):
+            shutil.move(os.path.join(session_dir, "combined_audio.wav"), tts_output_path)
         
         return {
             "source_text": transcription_result["text"],
-            "translated_text": translated_text,
+            "translated_text": full_translated_text,
             "source_segments": transcription_result["segments"],
             "translated_segments": translated_segments,
             "translated_srt": translated_srt,
@@ -344,11 +358,16 @@ def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, 
         )
         jobs.job_manager.update_job(job_id, progress=40)
         
+        # Use detected language for translation steps
+        actual_src = transcription_result.get("detected_language")
+        if not actual_src or actual_src.lower() == "auto":
+             actual_src = "English" # Final fallback
+             
         # 3. Batch translate all segments & construct SRT
         seg_texts = [seg["text"] for seg in transcription_result["segments"]]
         translated_texts = model_manager.translate_batch(
             texts=seg_texts,
-            src_lang=src_lang,
+            src_lang=actual_src,
             tgt_lang=tgt_lang
         )
         jobs.job_manager.update_job(job_id, progress=60)
@@ -379,14 +398,12 @@ def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, 
         output_video_filename = ""
         full_translated_text = ""
         if overlay_voice_option:
-            print("[*] Generating voiceover and overlaying...")
-            full_translated_text = model_manager.translate(
-                text=transcription_result["text"],
-                src_lang=src_lang,
-                tgt_lang=tgt_lang
-            )
-            tts_audio_path = os.path.join(session_dir, "tts_voiceover.wav")
-            model_manager.text_to_speech(full_translated_text, tgt_lang, tts_audio_path)
+            print("[*] Generating voiceover segments and overlaying...")
+            # Enhanced synchronization: synthesize each segment and merge them at correct timestamps
+            tts_audio_path = subtitles.merge_audio_segments(translated_segments, session_dir, model_manager, tgt_lang)
+            
+            # Still generate full text for UI results
+            full_translated_text = " ".join([seg["text"] for seg in translated_segments])
             
             final_video_path = os.path.join(session_dir, "translated_final.mp4")
             subtitles.overlay_audio_on_video(current_video_stream, tts_audio_path, final_video_path)
@@ -481,15 +498,22 @@ def run_document_translation(job_id, session_id, input_path, output_path, file_e
     try:
         jobs.job_manager.update_job(job_id, status="processing", progress=10)
         
+        # Auto-detect if requested
+        actual_src = src_lang
+        if src_lang.lower() == "auto":
+            preview = document_utils.extract_preview_text(input_path, file_ext)
+            actual_src = detect_language_safe(preview)
+            print(f"[*] Auto-detected document language: {actual_src}")
+
         # Document translation logic
         if file_ext == ".docx":
-            document_utils.translate_docx(input_path, output_path, model_manager, src_lang, tgt_lang)
+            document_utils.translate_docx(input_path, output_path, model_manager, actual_src, tgt_lang)
         elif file_ext == ".pptx":
-            document_utils.translate_pptx(input_path, output_path, model_manager, src_lang, tgt_lang)
+            document_utils.translate_pptx(input_path, output_path, model_manager, actual_src, tgt_lang)
         elif file_ext == ".xlsx":
-            document_utils.translate_xlsx(input_path, output_path, model_manager, src_lang, tgt_lang)
+            document_utils.translate_xlsx(input_path, output_path, model_manager, actual_src, tgt_lang)
         elif file_ext == ".pdf":
-            document_utils.translate_pdf(input_path, output_path, model_manager, src_lang, tgt_lang)
+            document_utils.translate_pdf(input_path, output_path, model_manager, actual_src, tgt_lang)
         
         jobs.job_manager.update_job(
             job_id, 
@@ -498,7 +522,8 @@ def run_document_translation(job_id, session_id, input_path, output_path, file_e
             result={
                 "output_url": f"/api/download-file?session_id={session_id}&filename={output_filename}",
                 "session_id": session_id,
-                "filename": output_filename
+                "filename": output_filename,
+                "detected_src_lang": actual_src
             }
         )
     except Exception as e:
