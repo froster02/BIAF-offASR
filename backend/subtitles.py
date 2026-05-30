@@ -143,3 +143,57 @@ def overlay_audio_on_video(video_path, audio_path, output_path):
     ]
     run_ffmpeg_command(cmd)
     return output_path
+
+def merge_audio_segments(segments, session_dir, model_manager, tgt_lang):
+    """
+    Synthesize and merge audio segments at correct timestamps.
+    Returns the path to the combined audio file.
+    """
+    import soundfile as sf
+    import numpy as np
+    
+    combined_audio = []
+    current_time = 0.0
+    sample_rate = 16000
+    
+    for i, seg in enumerate(segments):
+        start = seg["start"]
+        end = seg["end"]
+        target_duration = end - start
+        
+        # 1. Add silence between current_time and start
+        if start > current_time:
+            silence_len = int((start - current_time) * sample_rate)
+            combined_audio.append(np.zeros(silence_len))
+            current_time = start
+            
+        # 2. Generate TTS for segment
+        seg_audio_path = os.path.join(session_dir, f"seg_{i}.wav")
+        model_manager.text_to_speech(seg["text"], tgt_lang, seg_audio_path)
+        
+        data, sr = sf.read(seg_audio_path)
+        if sr != sample_rate:
+            import scipy.signal
+            data = scipy.signal.resample(data, int(len(data) * sample_rate / sr))
+            
+        generated_duration = len(data) / sample_rate
+        
+        # 3. If generated audio is too long, speed it up to fit target duration
+        if generated_duration > target_duration and target_duration > 0:
+            import scipy.interpolate
+            print(f"[*] Speeding up segment {i} ({generated_duration:.2f}s -> {target_duration:.2f}s)")
+            x = np.arange(len(data))
+            new_x = np.linspace(0, len(data)-1, int(target_duration * sample_rate))
+            f = scipy.interpolate.interp1d(x, data)
+            data = f(new_x).astype(np.float32)
+            
+        combined_audio.append(data)
+        current_time += len(data) / sample_rate
+        
+    if not combined_audio:
+        return None
+        
+    final_data = np.concatenate(combined_audio)
+    output_path = os.path.join(session_dir, "combined_audio.wav")
+    sf.write(output_path, final_data, sample_rate)
+    return output_path

@@ -643,8 +643,22 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 6px 18px rgba(46, 125, 50, 0.45);
 }
 
-.btn-primary:active {
-  transform: translateY(0);
+.btn-danger {
+  background: #c62828;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(198, 40, 40, 0.35);
+}
+
+.btn-danger:hover {
+  background: #b71c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(198, 40, 40, 0.45);
+}
+
+.recording-pulse {
+  animation: pulse-dot 1s infinite;
+  display: inline-block;
+  margin-right: 0.25rem;
 }
 
 .btn-secondary {
