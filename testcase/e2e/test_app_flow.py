@@ -42,6 +42,13 @@ def test_full_app_flow():
             page.goto("http://localhost:5173")
             page.wait_for_load_state("networkidle")
             
+            # Login
+            print("Logging in...")
+            page.fill("input[placeholder='admin or user']", "admin")
+            page.fill("input[placeholder='••••••••']", "admin123")
+            page.click("button:has-text('Login')")
+            page.wait_for_selector("text=Dashboard", timeout=10000)
+            
             # Verify Title
             print(f"Page title: {page.title()}")
             assert "BIAF-offASR" in page.content() or "Translation" in page.content()
@@ -70,8 +77,14 @@ def test_full_app_flow():
             
     finally:
         # Cleanup processes
-        os.killpg(os.getpgid(backend_proc.pid), signal.SIGTERM)
-        os.killpg(os.getpgid(frontend_proc.pid), signal.SIGTERM)
+        try:
+            os.killpg(os.getpgid(backend_proc.pid), signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            os.killpg(os.getpgid(frontend_proc.pid), signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         print("Servers stopped.")
 
 if __name__ == "__main__":
