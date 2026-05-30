@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [auth, setAuth] = useState(() => {
+    const saved = localStorage.getItem('baif_auth');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const [modelsStatus, setModelsStatus] = useState({
     is_cached: false,
     whisper_cached: false,
@@ -9,7 +16,7 @@ function App() {
     tts_cached: false,
     models_dir: ''
   });
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const [whisperSize, setWhisperSize] = useState('base');
 
   // Text Translation States
@@ -44,10 +51,58 @@ function App() {
   const [videoResult, setVideoResult] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Document Translation States
+  const [docFile, setDocFile] = useState(null);
+  const [docSrcLang, setDocSrcLang] = useState('English');
+  const [docTgtLang, setDocTgtLang] = useState('Hindi');
+  const [isProcessingDoc, setIsProcessingDoc] = useState(false);
+  const [docResult, setDocResult] = useState(null);
+  const docFileInputRef = useRef(null);
+  const videoFileInputRef = useRef(null);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAuth(data);
+        localStorage.setItem('baif_auth', JSON.stringify(data));
+      } else {
+        alert('Invalid credentials');
+      }
+    } catch (e) {
+      alert('Login error');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setAuth(null);
+    localStorage.removeItem('baif_auth');
+    setActiveTab('dashboard');
+  };
+
+  // Helper for authenticated fetch
+  const authFetch = async (url, options = {}) => {
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${auth?.access_token}`
+    };
+    return fetch(url, { ...options, headers });
+  };
+
   // Fetch model status from server
   const checkServerStatus = async () => {
+    if (!auth) return;
     try {
-      const res = await fetch('/api/models-status');
+      const res = await authFetch('/api/models-status');
       if (res.ok) {
         const data = await res.json();
         setModelsStatus(data);
@@ -72,7 +127,7 @@ function App() {
     setIsTranslatingText(true);
     setTtsAudioUrl('');
     try {
-      const res = await fetch('/api/translate-text', {
+      const res = await authFetch('/api/translate-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,7 +154,7 @@ function App() {
     if (!textOutput.trim()) return;
     setIsGeneratingTts(true);
     try {
-      const res = await fetch('/api/text-to-speech', {
+      const res = await authFetch('/api/text-to-speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -152,7 +207,7 @@ function App() {
         });
       }, 800);
 
-      const res = await fetch('/api/translate-audio', {
+      const res = await authFetch('/api/translate-audio', {
         method: 'POST',
         body: formData
       });
@@ -188,6 +243,33 @@ function App() {
     }
   };
 
+  const pollJob = async (job_id, onSuccess, onFail, onProgress) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await authFetch(`/api/jobs/${job_id}`);
+        if (res.ok) {
+          const job = await res.json();
+          if (onProgress) onProgress(job.progress, job.status);
+          
+          if (job.status === 'completed') {
+            clearInterval(interval);
+            onSuccess(job.result);
+          } else if (job.status === 'failed') {
+            clearInterval(interval);
+            onFail(job.error || 'Job failed');
+          }
+        } else {
+          clearInterval(interval);
+          onFail('Error checking job status');
+        }
+      } catch (e) {
+        clearInterval(interval);
+        onFail('Network error checking job status');
+      }
+    }, 2000);
+    return interval;
+  };
+
   const processVideo = async () => {
     if (!videoFile) return;
     setIsProcessingVideo(true);
@@ -203,40 +285,91 @@ function App() {
     formData.append('overlay_voice_option', overlayVoice);
 
     try {
-      const progressInterval = setInterval(() => {
-        setVideoProgress((prev) => {
-          if (prev >= 95) { clearInterval(progressInterval); return prev; }
-          if (prev >= 75) { setVideoProgressText('Injecting subtitle layers and copying streams with FFmpeg...'); return prev + 1; }
-          if (prev >= 45) { setVideoProgressText('Translating timeline and rendering transcript overlays...'); return prev + 2; }
-          if (prev >= 20) { setVideoProgressText('Running speech-to-text extraction using Whisper...'); return prev + 3; }
-          return prev + 5;
-        });
-      }, 1000);
-
-      const res = await fetch('/api/process-video', {
+      const res = await authFetch('/api/process-video', {
         method: 'POST',
         body: formData
       });
 
-      clearInterval(progressInterval);
-
       if (res.ok) {
-        setVideoProgress(100);
-        setVideoProgressText('Video processed successfully!');
-        const data = await res.json();
-        setVideoResult(data);
+        const { job_id } = await res.json();
+        pollJob(
+          job_id,
+          (result) => {
+            setVideoResult(result);
+            setVideoProgress(100);
+            setVideoProgressText('Video processed successfully!');
+            setTimeout(() => {
+              setIsProcessingVideo(false);
+              setVideoProgress(0);
+            }, 1000);
+          },
+          (error) => {
+            alert(`Video processing failed: ${error}`);
+            setIsProcessingVideo(false);
+          },
+          (progress, status) => {
+            setVideoProgress(progress);
+            if (status === 'processing') {
+              if (progress < 40) setVideoProgressText('Running speech-to-text extraction using Whisper...');
+              else if (progress < 70) setVideoProgressText('Translating timeline and rendering transcript overlays...');
+              else setVideoProgressText('Injecting subtitle layers and copying streams with FFmpeg...');
+            }
+          }
+        );
       } else {
-        alert('Video processing failed. Verify that FFmpeg is installed.');
+        alert('Video processing failed to start.');
         setIsProcessingVideo(false);
       }
     } catch (e) {
       alert('Error connecting to video processing endpoint.');
       setIsProcessingVideo(false);
-    } finally {
-      setTimeout(() => {
-        setIsProcessingVideo(false);
-        setVideoProgress(0);
-      }, 1000);
+    }
+  };
+
+  // Handle Document Upload & Processing
+  const handleDocUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setDocFile(file);
+      setDocResult(null);
+    }
+  };
+
+  const processDoc = async () => {
+    if (!docFile) return;
+    setIsProcessingDoc(true);
+
+    const formData = new FormData();
+    formData.append('file', docFile);
+    formData.append('src_lang', docSrcLang);
+    formData.append('tgt_lang', docTgtLang);
+
+    try {
+      const res = await authFetch('/api/translate-document', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const { job_id } = await res.json();
+        pollJob(
+          job_id,
+          (result) => {
+            setDocResult(result);
+            setIsProcessingDoc(false);
+          },
+          (error) => {
+            alert(`Document translation failed: ${error}`);
+            setIsProcessingDoc(false);
+          }
+        );
+      } else {
+        alert('Document translation failed to start.');
+        setIsProcessingDoc(false);
+      }
+    } catch (e) {
+      alert('Error connecting to backend.');
+      setIsProcessingDoc(false);
     }
   };
 
@@ -244,6 +377,7 @@ function App() {
   const navItems = [
     { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
     { id: 'text',      icon: '✍️', label: 'Text Translate' },
+    { id: 'docs',      icon: '📄', label: 'Documents' },
     { id: 'audio',     icon: '🎵', label: 'Audio Dub' },
     { id: 'video',     icon: '🎬', label: 'Video Dub' },
     { id: 'settings',  icon: '⚙️', label: 'Settings' },
@@ -252,6 +386,7 @@ function App() {
   const pageTitles = {
     dashboard: 'CSR Translation Hub',
     text:      'Text Translator',
+    docs:      'Document Translator',
     audio:     'Speech & Audio Dubber',
     video:     'Video Subtitler & Dubber',
     settings:  'App Settings & Local Models',
@@ -260,6 +395,7 @@ function App() {
   const pageSubtitles = {
     dashboard: 'An enterprise offline AI portal — bridging Indian regional language barriers.',
     text:      'Translate sentences instantly across Marathi, Hindi, and English.',
+    docs:      'Translate Word, PowerPoint, Excel, and PDF files while preserving formatting.',
     audio:     'Transcribe audio tracks, translate texts, and synthesize spoken voiceovers.',
     video:     'Extract dialogue, burn-in subtitles, and replace spoken tracks on media files.',
     settings:  'Configure offline hardware capabilities and model cache states.',
@@ -307,16 +443,69 @@ function App() {
         </div>
 
         {/* Connection Status */}
-        <div className={`navbar-status ${isConnected ? 'online' : 'offline'}`}>
-          <span className={`dot ${isConnected ? '' : 'offline'}`} />
-          <span className="status-text">{isConnected ? 'Connected' : 'Offline'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {auth && (
+            <button className="btn btn-outline-white" onClick={handleLogout} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
+              🚪 Logout ({auth.role})
+            </button>
+          )}
+          <div className={`navbar-status ${isConnected ? 'online' : 'offline'}`}>
+            <span className={`dot ${isConnected ? '' : 'offline'}`} />
+            <span className="status-text">{isConnected ? 'Connected' : 'Offline'}</span>
+          </div>
         </div>
       </nav>
 
       {/* ── Main Content ── */}
       <div className="main-content">
-
-        {/* Page Header */}
+        {!auth ? (
+          <div className="glass-card" style={{ maxWidth: '400px', margin: '4rem auto', padding: '2.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌾</div>
+              <h2 className="page-title" style={{ fontSize: '1.5rem' }}>BAIF Offline Portal</h2>
+              <p className="page-subtitle">Authorized Access Only</p>
+            </div>
+            <form onSubmit={handleLogin}>
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <input
+                  type="text"
+                  className="select-control"
+                  style={{ width: '100%', padding: '0.6rem' }}
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                  placeholder="admin or user"
+                  required
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '2rem' }}>
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  className="select-control"
+                  style={{ width: '100%', padding: '0.6rem' }}
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                disabled={isLoggingIn}
+              >
+                {isLoggingIn ? '🔐 Verifying...' : '🔑 Login to Portal'}
+              </button>
+            </form>
+            <div style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+              Default credentials: admin/admin123 or user/user123
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Page Header */}
         <div className="header-container">
           <h1 className="page-title">{pageTitles[activeTab]}</h1>
           <p className="page-subtitle">{pageSubtitles[activeTab]}</p>
@@ -364,6 +553,11 @@ function App() {
                     <div className="capability-title">Text Translation</div>
                     <div className="capability-desc">Fast, offline text translation between Marathi, Hindi, and English.</div>
                   </div>
+                  <div className="capability-card" onClick={() => setActiveTab('docs')}>
+                    <div className="capability-icon">📄</div>
+                    <div className="capability-title">Document Translation</div>
+                    <div className="capability-desc">Translate Word, PowerPoint, Excel, and PDF while preserving formatting.</div>
+                  </div>
                   <div className="capability-card" onClick={() => setActiveTab('audio')}>
                     <div className="capability-icon">🎵</div>
                     <div className="capability-title">Audio Translation</div>
@@ -374,11 +568,6 @@ function App() {
                     <div className="capability-title">Video Dubbing</div>
                     <div className="capability-desc">Process video files to generate translated subtitles and burned-in captions.</div>
                   </div>
-                  <div className="capability-card" onClick={() => setActiveTab('text')}>
-                    <div className="capability-icon">🔊</div>
-                    <div className="capability-title">Text-to-Speech</div>
-                    <div className="capability-desc">Synthesize translated text into natural regional spoken audio using MMS-TTS.</div>
-                  </div>
                 </div>
               </div>
 
@@ -387,6 +576,7 @@ function App() {
                 <div className="system-info-card">
                   <ul className="system-info-list">
                     <li>Text Translation via Meta NLLB-200 distilled Seq2Seq model optimized for Indian languages.</li>
+                    <li>Document Processing for DOCX, PPTX, XLSX, and PDF with format-preserving logic.</li>
                     <li>Audio Transcription using OpenAI Whisper ASR with automatic chunking & segmentation.</li>
                     <li>Synthesized Voice via Meta MMS VITS text-to-speech for Hindi, Marathi & English.</li>
                     <li>Subtitle Processing through a high-speed FFmpeg wrapper for SRT/VTT burn-in.</li>
@@ -409,6 +599,7 @@ function App() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Source Language</label>
                 <select className="select-control" value={textSrcLang} onChange={(e) => setTextSrcLang(e.target.value)}>
+                  <option value="auto">✨ Auto Detect</option>
                   <option value="English">🇬🇧 English</option>
                   <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
                   <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
@@ -480,6 +671,79 @@ function App() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════
+            DOCUMENT TRANSLATION TAB
+        ════════════════════════════════════════ */}
+        {activeTab === 'docs' && (
+          <div className="glass-card">
+            <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
+              <div className="form-group">
+                <label className="form-label">Source Language</label>
+                <select className="select-control" value={docSrcLang} onChange={(e) => setDocSrcLang(e.target.value)}>
+                  <option value="English">English</option>
+                  <option value="Hindi">Hindi</option>
+                  <option value="Marathi">Marathi</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Target Language</label>
+                <select className="select-control" value={docTgtLang} onChange={(e) => setDocTgtLang(e.target.value)}>
+                  <option value="Hindi">Hindi</option>
+                  <option value="Marathi">Marathi</option>
+                  <option value="English">English</option>
+                </select>
+              </div>
+            </div>
+
+            <div 
+              className="dropzone" 
+              onClick={() => docFileInputRef.current.click()}
+              style={{ marginBottom: '1.5rem' }}
+            >
+              <div className="dropzone-icon">📄</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click to upload documents</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Supports .docx, .pptx, .xlsx, .pdf</div>
+              <input
+                type="file"
+                ref={docFileInputRef}
+                style={{ display: 'none' }}
+                accept=".docx,.pptx,.xlsx,.pdf"
+                onChange={handleDocUpload}
+              />
+            </div>
+
+            {docFile && (
+              <div className="file-badge" style={{ marginBottom: '1.5rem' }}>
+                <span>📄</span>
+                <div>{docFile.name} ({(docFile.size / (1024 * 1024)).toFixed(2)} MB)</div>
+              </div>
+            )}
+
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              disabled={!docFile || isProcessingDoc}
+              onClick={processDoc}
+            >
+              {isProcessingDoc ? '⏳ Processing Document...' : '⚡ Translate Document'}
+            </button>
+
+            {docResult && (
+              <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                <div className="status-ok" style={{ marginBottom: '1rem' }}>✓ Translation Complete!</div>
+                <a 
+                  href={docResult.output_url} 
+                  className="btn btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
+                  download
+                >
+                  📥 Download Translated {docFile.name.split('.').pop().toUpperCase()}
+                </a>
+              </div>
+            )}
           </div>
         )}
 
@@ -872,6 +1136,8 @@ function App() {
               >📦 Pre-download Offline Weights</button>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 

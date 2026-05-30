@@ -6,9 +6,17 @@ import shutil
 
 client = TestClient(app)
 
+def get_auth_headers():
+    """Helper to get auth headers for testing."""
+    payload = {"username": "admin", "password": "admin123"}
+    response = client.post("/api/login", json=payload)
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 def test_get_models_status():
     """Test the models status endpoint."""
-    response = client.get("/api/models-status")
+    headers = get_auth_headers()
+    response = client.get("/api/models-status", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert "is_cached" in data
@@ -18,14 +26,13 @@ def test_get_models_status():
 
 def test_translate_text_api():
     """Test the text translation API (integration)."""
-    # Note: This will actually load the model if not cached, 
-    # but since it's a small distilled model, it should be fine in a dev environment.
+    headers = get_auth_headers()
     payload = {
         "text": "Hello world",
         "src_lang": "English",
         "tgt_lang": "Hindi"
     }
-    response = client.post("/api/translate-text", json=payload)
+    response = client.post("/api/translate-text", json=payload, headers=headers)
     assert response.status_code == 200
     assert "translated_text" in response.json()
 

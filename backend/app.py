@@ -1,19 +1,54 @@
 import os
 import shutil
 import uuid
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from langdetect import detect, DetectorFactory
+
+# Set seed for reproducible language detection
+DetectorFactory.seed = 0
 
 try:
     from . import models
+    from . import document_utils
+    from . import auth as auth_mod
+    from . import jobs
+    from . import subtitles
 except (ImportError, ValueError):
     import models
-import subtitles
+    import document_utils
+    import auth as auth_mod
+    import jobs
+    import subtitles
 
 app = FastAPI(title="Offline Translation API", version="1.0.0")
+
+# Auth Endpoints
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+@app.post("/api/login")
+def login(req: LoginRequest):
+    conn = auth_mod.get_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT password, role FROM users WHERE username=?", (req.username,))
+    row = c.fetchone()
+    conn.close()
+    
+    if not row or not auth_mod.verify_password(req.password, row[0]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+        
+    token = auth_mod.create_access_token(data={"sub": req.username, "role": row[1]})
+    return {"access_token": token, "token_type": "bearer", "role": row[1]}
+
+# Dependency for protected routes
+from fastapi import Depends
+protected = [Depends(auth_mod.get_current_user)]
+admin_only = [Depends(auth_mod.require_admin)]
 
 # Enable CORS for frontend local development
 app.add_middleware(
@@ -56,7 +91,7 @@ def startup_event():
     print("[*] Temporary folder cleared.")
 
 @app.get("/api/models-status")
-def get_models_status():
+def get_models_status(user=Depends(auth_mod.get_current_user)):
     """
     Check if the models cache exists and return which files are cached
     """
@@ -87,14 +122,47 @@ def get_models_status():
         "models_dir": MODELS_DIR
     }
 
+def detect_language_safe(text: str) -> str:
+    """
+    Detect language and map to supported names
+    """
+    try:
+        lang_code = detect(text)
+        mapping = {
+            "en": "English",
+            "hi": "Hindi",
+            "mr": "Marathi"
+        }
+        return mapping.get(lang_code, "English") # Default to English
+    except:
+        return "English"
+
+@app.post("/api/detect-language")
+def api_detect_language(req: dict):
+    text = req.get("text", "")
+    if not text:
+        return {"language": "English"}
+    return {"language": detect_language_safe(text)}
+
+@app.get("/api/jobs/{job_id}")
+def get_job_status(job_id: str, user=Depends(auth_mod.get_current_user)):
+    job = jobs.job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
 @app.post("/api/translate-text")
-def translate_text(req: TranslationRequest):
+def translate_text(req: TranslationRequest, user=Depends(auth_mod.get_current_user)):
     """
     Translate text using offline NLLB-200 model
     """
     try:
-        translated = model_manager.translate(req.text, req.src_lang, req.tgt_lang)
-        return {"translated_text": translated}
+        src_lang = req.src_lang
+        if src_lang.lower() == "auto":
+            src_lang = detect_language_safe(req.text)
+            
+        translated = model_manager.translate(req.text, src_lang, req.tgt_lang)
+        return {"translated_text": translated, "detected_src_lang": src_lang}
     except Exception as e:
         print(f"[Error] /api/translate-text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -103,7 +171,8 @@ def translate_text(req: TranslationRequest):
 async def transcribe_audio(
     file: UploadFile = File(...),
     model_size: str = Form("base"),
-    language: str = Form("English")
+    language: str = Form("English"),
+    user=Depends(auth_mod.get_current_user)
 ):
     """
     Transcribe uploaded audio or video file using offline Whisper
@@ -159,7 +228,8 @@ async def translate_audio(
     file: UploadFile = File(...),
     model_size: str = Form("base"),
     src_lang: str = Form("English"),
-    tgt_lang: str = Form("Hindi")
+    tgt_lang: str = Form("Hindi"),
+    user=Depends(auth_mod.get_current_user)
 ):
     """
     Transcribe and translate an audio or video file
@@ -237,7 +307,7 @@ async def translate_audio(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/text-to-speech")
-def text_to_speech(req: TTSRequest):
+def text_to_speech(req: TTSRequest, user=Depends(auth_mod.get_current_user)):
     """
     Synthesize text into speech and return WAV audio binary stream
     """
@@ -257,33 +327,14 @@ def text_to_speech(req: TTSRequest):
         print(f"[Error] /api/text-to-speech: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/process-video")
-async def process_video(
-    file: UploadFile = File(...),
-    model_size: str = Form("base"),
-    src_lang: str = Form("English"),
-    tgt_lang: str = Form("Hindi"),
-    burn_subtitles_option: bool = Form(True),
-    overlay_voice_option: bool = Form(False)
-):
-    """
-    Complete video translation pipeline: transcribe, translate, burn subtitles, and/or replace voice over.
-    """
-    session_id = str(uuid.uuid4())
-    session_dir = os.path.join(TEMP_DIR, session_id)
-    os.makedirs(session_dir, exist_ok=True)
-    
-    filename = file.filename or "unknown"
-    file_ext = os.path.splitext(filename)[1].lower()
-    input_path = os.path.join(session_dir, f"input{file_ext}")
-    
-    with open(input_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
+def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, model_size, src_lang, tgt_lang, burn_subtitles_option, overlay_voice_option):
     try:
+        jobs.job_manager.update_job(job_id, status="processing", progress=5)
+        
         # 1. Extract audio for ASR
         audio_path = os.path.join(session_dir, "extracted_audio.wav")
         subtitles.extract_audio(input_path, audio_path)
+        jobs.job_manager.update_job(job_id, progress=15)
         
         # 2. Transcribe
         transcription_result = model_manager.transcribe(
@@ -291,6 +342,7 @@ async def process_video(
             size=model_size,
             language=src_lang
         )
+        jobs.job_manager.update_job(job_id, progress=40)
         
         # 3. Batch translate all segments & construct SRT
         seg_texts = [seg["text"] for seg in transcription_result["segments"]]
@@ -299,6 +351,7 @@ async def process_video(
             src_lang=src_lang,
             tgt_lang=tgt_lang
         )
+        jobs.job_manager.update_job(job_id, progress=60)
         
         translated_segments = []
         for seg, trans_text in zip(transcription_result["segments"], translated_texts):
@@ -320,44 +373,80 @@ async def process_video(
             burned_video_path = os.path.join(session_dir, "burned_subtitles.mp4")
             subtitles.burn_subtitles(input_path, translated_srt_path, burned_video_path)
             current_video_stream = burned_video_path
+        jobs.job_manager.update_job(job_id, progress=80)
             
         # 5. Handle audio overlay if selected
+        output_video_filename = ""
+        full_translated_text = ""
         if overlay_voice_option:
             print("[*] Generating voiceover and overlaying...")
-            # Translate full text
             full_translated_text = model_manager.translate(
                 text=transcription_result["text"],
                 src_lang=src_lang,
                 tgt_lang=tgt_lang
             )
-            # Synthesize
             tts_audio_path = os.path.join(session_dir, "tts_voiceover.wav")
             model_manager.text_to_speech(full_translated_text, tgt_lang, tts_audio_path)
             
-            # Overlay new audio track
             final_video_path = os.path.join(session_dir, "translated_final.mp4")
             subtitles.overlay_audio_on_video(current_video_stream, tts_audio_path, final_video_path)
             output_video_filename = "translated_final.mp4"
         else:
-            # If only burning subtitles (or doing nothing)
             if burn_subtitles_option:
                 output_video_filename = "burned_subtitles.mp4"
             else:
-                # Fallback to copy input if nothing selected
                 output_video_filename = f"input{file_ext}"
-                
-        return {
-            "source_text": transcription_result["text"],
-            "translated_text": model_manager.translate(transcription_result["text"], src_lang, tgt_lang) if overlay_voice_option else "",
-            "translated_srt": translated_srt,
-            "video_url": f"/api/download-file?session_id={session_id}&filename={output_video_filename}",
-            "srt_url": f"/api/download-file?session_id={session_id}&filename=translated_subs.srt",
-            "session_id": session_id
-        }
         
+        jobs.job_manager.update_job(
+            job_id,
+            status="completed",
+            progress=100,
+            result={
+                "source_text": transcription_result["text"],
+                "translated_text": full_translated_text,
+                "translated_srt": translated_srt,
+                "video_url": f"/api/download-file?session_id={session_id}&filename={output_video_filename}",
+                "srt_url": f"/api/download-file?session_id={session_id}&filename=translated_subs.srt",
+                "session_id": session_id
+            }
+        )
     except Exception as e:
-        print(f"[Error] /api/process-video: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[Error] Job {job_id}: {e}")
+        jobs.job_manager.update_job(job_id, status="failed", error=str(e))
+
+@app.post("/api/process-video")
+async def api_process_video(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    model_size: str = Form("base"),
+    src_lang: str = Form("English"),
+    tgt_lang: str = Form("Hindi"),
+    burn_subtitles_option: bool = Form(True),
+    overlay_voice_option: bool = Form(False),
+    user=Depends(auth_mod.get_current_user)
+):
+    """
+    Complete video translation pipeline asynchronously
+    """
+    session_id = str(uuid.uuid4())
+    session_dir = os.path.join(TEMP_DIR, session_id)
+    os.makedirs(session_dir, exist_ok=True)
+    
+    filename = file.filename or "unknown"
+    file_ext = os.path.splitext(filename)[1].lower()
+    input_path = os.path.join(session_dir, f"input{file_ext}")
+    
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    job_id = jobs.job_manager.create_job("video_processing")
+    background_tasks.add_task(
+        run_video_processing,
+        job_id, session_id, input_path, session_dir, file_ext, model_size, src_lang, tgt_lang, 
+        burn_subtitles_option, overlay_voice_option
+    )
+    
+    return {"job_id": job_id}
 
 @app.get("/api/download-file")
 def download_file(session_id: str, filename: str):
@@ -377,8 +466,79 @@ def download_file(session_id: str, filename: str):
         media_type = "audio/wav"
     elif ext in [".srt", ".vtt"]:
         media_type = "text/plain"
+    elif ext == ".docx":
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif ext == ".pptx":
+        media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    elif ext == ".xlsx":
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    elif ext == ".pdf":
+        media_type = "application/pdf"
         
     return FileResponse(file_path, media_type=media_type, filename=filename)
+
+def run_document_translation(job_id, session_id, input_path, output_path, file_ext, src_lang, tgt_lang, output_filename):
+    try:
+        jobs.job_manager.update_job(job_id, status="processing", progress=10)
+        
+        # Document translation logic
+        if file_ext == ".docx":
+            document_utils.translate_docx(input_path, output_path, model_manager, src_lang, tgt_lang)
+        elif file_ext == ".pptx":
+            document_utils.translate_pptx(input_path, output_path, model_manager, src_lang, tgt_lang)
+        elif file_ext == ".xlsx":
+            document_utils.translate_xlsx(input_path, output_path, model_manager, src_lang, tgt_lang)
+        elif file_ext == ".pdf":
+            document_utils.translate_pdf(input_path, output_path, model_manager, src_lang, tgt_lang)
+        
+        jobs.job_manager.update_job(
+            job_id, 
+            status="completed", 
+            progress=100, 
+            result={
+                "output_url": f"/api/download-file?session_id={session_id}&filename={output_filename}",
+                "session_id": session_id,
+                "filename": output_filename
+            }
+        )
+    except Exception as e:
+        print(f"[Error] Job {job_id}: {e}")
+        jobs.job_manager.update_job(job_id, status="failed", error=str(e))
+
+@app.post("/api/translate-document")
+async def api_translate_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    src_lang: str = Form("English"),
+    tgt_lang: str = Form("Hindi"),
+    user=Depends(auth_mod.get_current_user)
+):
+    """
+    Translate uploaded document (docx, pptx, xlsx, pdf) asynchronously
+    """
+    session_id = str(uuid.uuid4())
+    session_dir = os.path.join(TEMP_DIR, session_id)
+    os.makedirs(session_dir, exist_ok=True)
+    
+    filename = file.filename or "unknown"
+    file_ext = os.path.splitext(filename)[1].lower()
+    if file_ext not in [".docx", ".pptx", ".xlsx", ".pdf"]:
+         raise HTTPException(status_code=400, detail=f"Unsupported file format: {file_ext}")
+
+    input_path = os.path.join(session_dir, f"input{file_ext}")
+    output_filename = f"translated_{filename}"
+    output_path = os.path.join(session_dir, output_filename)
+    
+    with open(input_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    job_id = jobs.job_manager.create_job("document_translation")
+    background_tasks.add_task(
+        run_document_translation, 
+        job_id, session_id, input_path, output_path, file_ext, src_lang, tgt_lang, output_filename
+    )
+    
+    return {"job_id": job_id}
 
 # Mount frontend build folder statically if it exists
 frontend_dist = os.path.abspath(os.path.join(BASE_DIR, "../frontend/dist"))
