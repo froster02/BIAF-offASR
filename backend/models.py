@@ -154,10 +154,7 @@ class ModelManager:
     def translate(self, text, src_lang, tgt_lang):
         if not text.strip():
             return ""
-            
-        if self.ci_mode:
-            return f"[CI MOCK] {tgt_lang}: {text}"
-            
+
         if src_lang == tgt_lang:
             return text
 
@@ -167,12 +164,15 @@ class ModelManager:
             "Hindi": "hin_Deva",
             "English": "eng_Latn"
         }
-        
+
         src_code = lang_codes.get(src_lang)
         tgt_code = lang_codes.get(tgt_lang)
-        
+
         if not src_code or not tgt_code:
             raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
+
+        if self.ci_mode:
+            return f"[CI MOCK] {tgt_lang}: {text}"
             
         with self.lock:
             model, tokenizer = self.get_nllb()
