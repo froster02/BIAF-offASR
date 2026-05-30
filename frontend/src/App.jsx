@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -22,26 +22,32 @@ function App() {
   // Text Translation States
   const [textInput, setTextInput] = useState('');
   const [textOutput, setTextOutput] = useState('');
-  const [textSrcLang, setTextSrcLang] = useState('English');
+  const [textSrcLang, setTextSrcLang] = useState('auto');
   const [textTgtLang, setTextTgtLang] = useState('Hindi');
+  const [detectedTextLang, setDetectedTextLang] = useState('');
   const [isTranslatingText, setIsTranslatingText] = useState(false);
   const [ttsAudioUrl, setTtsAudioUrl] = useState('');
   const [isGeneratingTts, setIsGeneratingTts] = useState(false);
 
   // Audio Translation States
   const [audioFile, setAudioFile] = useState(null);
-  const [audioSrcLang, setAudioSrcLang] = useState('English');
+  const [audioSrcLang, setAudioSrcLang] = useState('auto');
   const [audioTgtLang, setAudioTgtLang] = useState('Hindi');
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioProgressText, setAudioProgressText] = useState('');
   const [audioResult, setAudioResult] = useState(null);
   const [audioActiveSubTab, setAudioActiveSubTab] = useState('translation');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
   const audioFileInputRef = useRef(null);
 
   // Video Translation States
   const [videoFile, setVideoFile] = useState(null);
-  const [videoSrcLang, setVideoSrcLang] = useState('English');
+  const [videoSrcLang, setVideoSrcLang] = useState('auto');
   const [videoTgtLang, setVideoTgtLang] = useState('Hindi');
   const [burnSubtitles, setBurnSubtitles] = useState(true);
   const [overlayVoice, setOverlayVoice] = useState(false);
@@ -53,7 +59,7 @@ function App() {
 
   // Document Translation States
   const [docFile, setDocFile] = useState(null);
-  const [docSrcLang, setDocSrcLang] = useState('English');
+  const [docSrcLang, setDocSrcLang] = useState('auto');
   const [docTgtLang, setDocTgtLang] = useState('Hindi');
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
   const [docResult, setDocResult] = useState(null);
@@ -76,7 +82,7 @@ function App() {
       } else {
         alert('Invalid credentials');
       }
-    } catch (e) {
+    } catch {
       alert('Login error');
     } finally {
       setIsLoggingIn(false);
@@ -110,16 +116,32 @@ function App() {
       } else {
         setIsConnected(false);
       }
-    } catch (e) {
+    } catch {
       setIsConnected(false);
     }
   };
 
   useEffect(() => {
-    checkServerStatus();
-    const interval = setInterval(checkServerStatus, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    if (!auth) return;
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await authFetch('/api/models-status');
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setModelsStatus(data);
+            setIsConnected(true);
+          } else {
+            setIsConnected(false);
+          }
+        }
+      } catch {
+        if (!cancelled) setIsConnected(false);
+      }
+    }, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [auth]);
 
   // Handle Text Translation
   const handleTextTranslate = async () => {
@@ -139,10 +161,13 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setTextOutput(data.translated_text);
+        if (data.detected_src_lang) {
+          setDetectedTextLang(data.detected_src_lang);
+        }
       } else {
         alert('Translation failed. Please make sure the backend is running and models are loaded.');
       }
-    } catch (e) {
+    } catch {
       alert('Network error connecting to backend.');
     } finally {
       setIsTranslatingText(false);
@@ -169,11 +194,55 @@ function App() {
       } else {
         alert('TTS Synthesis failed.');
       }
-    } catch (e) {
+    } catch {
       alert('Error generating TTS.');
     } finally {
       setIsGeneratingTts(false);
     }
+  };
+
+  // Handle Audio Recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const file = new File([audioBlob], "recorded_audio.wav", { type: 'audio/wav' });
+        setAudioFile(file);
+        setAudioResult(null);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      alert('Could not access microphone: ' + err.message);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(timerRef.current);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Handle Audio Upload & Processing
@@ -223,7 +292,7 @@ function App() {
         alert('Audio processing failed. Check backend logs.');
         setIsProcessingAudio(false);
       }
-    } catch (e) {
+    } catch {
       alert('Error connecting to backend.');
       setIsProcessingAudio(false);
     } finally {
@@ -262,7 +331,7 @@ function App() {
           clearInterval(interval);
           onFail('Error checking job status');
         }
-      } catch (e) {
+      } catch {
         clearInterval(interval);
         onFail('Network error checking job status');
       }
@@ -320,7 +389,7 @@ function App() {
         alert('Video processing failed to start.');
         setIsProcessingVideo(false);
       }
-    } catch (e) {
+    } catch {
       alert('Error connecting to video processing endpoint.');
       setIsProcessingVideo(false);
     }
@@ -367,7 +436,7 @@ function App() {
         alert('Document translation failed to start.');
         setIsProcessingDoc(false);
       }
-    } catch (e) {
+    } catch {
       alert('Error connecting to backend.');
       setIsProcessingDoc(false);
     }
@@ -598,12 +667,20 @@ function App() {
             <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Source Language</label>
-                <select className="select-control" value={textSrcLang} onChange={(e) => setTextSrcLang(e.target.value)}>
+                <select className="select-control" value={textSrcLang} onChange={(e) => {
+                  setTextSrcLang(e.target.value);
+                  setDetectedTextLang('');
+                }}>
                   <option value="auto">✨ Auto Detect</option>
                   <option value="English">🇬🇧 English</option>
                   <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
                   <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
                 </select>
+                {detectedTextLang && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--green-dark)', marginTop: '0.25rem', fontWeight: 600 }}>
+                    ✨ Detected: {detectedTextLang}
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Target Language</label>
@@ -683,10 +760,16 @@ function App() {
               <div className="form-group">
                 <label className="form-label">Source Language</label>
                 <select className="select-control" value={docSrcLang} onChange={(e) => setDocSrcLang(e.target.value)}>
-                  <option value="English">English</option>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
+                  <option value="auto">✨ Auto Detect</option>
+                  <option value="English">🇬🇧 English</option>
+                  <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
+                  <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
                 </select>
+                {docResult?.detected_src_lang && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--green-dark)', marginTop: '0.25rem', fontWeight: 600 }}>
+                    ✨ Detected: {docResult.detected_src_lang}
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Target Language</label>
@@ -761,6 +844,7 @@ function App() {
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>From</span>
                       <select className="select-control" value={audioSrcLang} onChange={(e) => setAudioSrcLang(e.target.value)}>
+                        <option value="auto">✨ Auto Detect</option>
                         <option value="English">English</option>
                         <option value="Hindi">Hindi</option>
                         <option value="Marathi">Marathi</option>
@@ -777,10 +861,30 @@ function App() {
                   </div>
                 </div>
 
-                <div className="dropzone" onClick={() => audioFileInputRef.current.click()}>
-                  <div className="dropzone-icon">📥</div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click to browse audio files</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Supports MP3, WAV, AAC, M4A, FLAC, OGG</div>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <button
+                    className={`btn ${isRecording ? 'btn-danger' : 'btn-secondary'}`}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isProcessingAudio}
+                  >
+                    {isRecording ? (
+                      <>
+                        <span className="recording-pulse">🔴</span>
+                        Stop ({formatTime(recordingTime)})
+                      </>
+                    ) : (
+                      <>🎤 Start Recording</>
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                    onClick={() => audioFileInputRef.current.click()}
+                    disabled={isRecording || isProcessingAudio}
+                  >
+                    📁 Upload File
+                  </button>
                   <input
                     type="file"
                     ref={audioFileInputRef}
@@ -790,8 +894,8 @@ function App() {
                   />
                 </div>
 
-                {audioFile && (
-                  <div className="file-badge" style={{ marginTop: '1rem' }}>
+                {audioFile && !isRecording && (
+                  <div className="file-badge" style={{ marginBottom: '1.5rem' }}>
                     <span>🎵</span>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {audioFile.name} ({(audioFile.size / (1024 * 1024)).toFixed(2)} MB)
@@ -850,6 +954,21 @@ function App() {
                           <label className="form-label" style={{ marginBottom: '0.25rem' }}>Dubbed Voice Audio</label>
                           <audio src={audioResult.translated_audio_url} controls className="custom-audio-player" style={{ marginTop: 0 }} />
                         </div>
+                        
+                        {/* Audio Segments rendering */}
+                        <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
+                          <label className="form-label" style={{ marginBottom: '0.5rem' }}>Translated Timeline</label>
+                          <div className="subtitle-editor" style={{ maxHeight: '200px' }}>
+                            {audioResult.translated_segments?.map((seg, idx) => (
+                              <div className="subtitle-segment" key={idx}>
+                                <div className="sub-time">
+                                  {new Date(seg.start * 1000).toISOString().substr(14, 5)} ➔ {new Date(seg.end * 1000).toISOString().substr(14, 5)}
+                                </div>
+                                <div className="sub-text">{seg.text}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="output-box" style={{ minHeight: '200px' }}>
@@ -904,6 +1023,7 @@ function App() {
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>From</span>
                       <select className="select-control" value={videoSrcLang} onChange={(e) => setVideoSrcLang(e.target.value)}>
+                        <option value="auto">✨ Auto Detect</option>
                         <option value="English">English</option>
                         <option value="Hindi">Hindi</option>
                         <option value="Marathi">Marathi</option>
