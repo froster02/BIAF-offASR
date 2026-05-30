@@ -11,3 +11,15 @@ pytest-mock>=3.10.0
 pytest-playwright>=0.4.0
 flake8>=6.0.0
 radon>=6.0.0
+python-docx
+python-pptx
+openpyxl
+pymupdf
+langdetect
+passlib[bcrypt]
+python-jose[cryptography]
+PyJWT
+pandas
+easyocr
+opencv-python-headless
+scipy
