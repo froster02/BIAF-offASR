@@ -22,7 +22,7 @@ WORKDIR /app
 COPY backend/requirements.txt ./backend/
 
 # Optimize PyTorch: Install CPU-only PyTorch to reduce image size drastically from 5GB+ to under 2GB (excluding models)
-RUN pip install --no-cache-dir "torch>=2.6.0" --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir "torch>=2.6.0" "torchvision>=0.19.0" --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # Copy all source files
