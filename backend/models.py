@@ -97,68 +97,70 @@ class ModelManager:
             }
         with self.lock:
             # Map human language name to Whisper code
+            # If "auto", we pass None to let Whisper detect
             lang_code = {
                 "Marathi": "mr",
                 "Hindi": "hi",
                 "English": "en"
-            }.get(language, "en")
+            }.get(language)
             
             pipe = self.get_whisper(size)
-            print(f"[*] Transcribing {audio_path} using Whisper-{size} (language={lang_code})...")
+            print(f"[*] Transcribing {audio_path} using Whisper-{size} (language={'auto' if lang_code is None else lang_code})...")
             
             # Run Whisper ASR pipeline with timestamps
+            gen_kwargs = {"return_timestamps": True}
+            if lang_code:
+                gen_kwargs["language"] = lang_code
+            
+            # Using the pipeline's underlying model to get detected language if needed
+            # but for simplicity, we can also look at the pipe.model.config.lang
+            # Actually, the pipeline result might have it if we use return_timestamps=True and return_language=True
+            
             result = pipe(
                 audio_path,
-                return_timestamps=True,
-                generate_kwargs={"language": lang_code}
+                chunk_length_s=30,
+                stride_length_s=5,
+                generate_kwargs=gen_kwargs
             )
             
-            # Standardize structure:
-            # text: full string transcript
-            # segments: list of dicts with {"start": float, "end": float, "text": str}
+            # Extract segments from chunks
+            chunks = result.get("chunks", [])
             segments = []
-            if "chunks" in result:
-                for c in result["chunks"]:
-                    # Ensure timestamps exist
-                    ts = c.get("timestamp")
-                    start = ts[0] if ts else 0.0
-                    end = ts[1] if ts else 0.0
-                    if end is None:
-                        end = start + 2.0  # Fallback for missing end timestamp
-                    segments.append({
-                        "start": start,
-                        "end": end,
-                        "text": c.get("text", "").strip()
-                    })
-                    
+            for chunk in chunks:
+                start, end = chunk.get("timestamp", (0, 0))
+                segments.append({
+                    "start": start,
+                    "end": end,
+                    "text": chunk.get("text", "")
+                })
+            
+            # Extract detected language if auto
+            detected_lang = language
+            if language == "auto" and hasattr(pipe.model, "config") and hasattr(pipe.model.config, "lang"):
+                # Map ISO code back to name
+                iso_to_name = {
+                    "mr": "Marathi",
+                    "hi": "Hindi",
+                    "en": "English"
+                }
+                detected_lang = iso_to_name.get(pipe.model.config.lang, "English")
+            
             return {
                 "text": result.get("text", ""),
-                "segments": segments
+                "segments": segments,
+                "detected_language": detected_lang
             }
 
     def translate(self, text, src_lang, tgt_lang):
         if not text.strip():
             return ""
             
-        # Map languages to NLLB-200 code
-        lang_codes = {
-            "Marathi": "mar_Deva",
-            "Hindi": "hin_Deva",
-            "English": "eng_Latn"
-        }
-        
-        src_code = lang_codes.get(src_lang)
-        tgt_code = lang_codes.get(tgt_lang)
-        
-        if not src_code or not tgt_code:
-            raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
+        if self.ci_mode:
+            return f"[CI MOCK] {tgt_lang}: {text}"
             
         if src_lang == tgt_lang:
             return text
 
-        if self.ci_mode:
-            return f"[CI MOCK] {tgt_lang}: {text}"
-            
         # Map languages to NLLB-200 code
         lang_codes = {
             "Marathi": "mar_Deva",
@@ -171,9 +173,6 @@ class ModelManager:
         
         if not src_code or not tgt_code:
             raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
-            
-        if src_lang == tgt_lang:
-            return text
             
         with self.lock:
             model, tokenizer = self.get_nllb()
@@ -200,25 +199,12 @@ class ModelManager:
         if not texts:
             return []
             
-        # Map languages to NLLB-200 code
-        lang_codes = {
-            "Marathi": "mar_Deva",
-            "Hindi": "hin_Deva",
-            "English": "eng_Latn"
-        }
-        
-        src_code = lang_codes.get(src_lang)
-        tgt_code = lang_codes.get(tgt_lang)
-        
-        if not src_code or not tgt_code:
-            raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
+        if self.ci_mode:
+            return [f"[CI MOCK] {tgt_lang}: {t}" if t.strip() else t for t in texts]
             
         if src_lang == tgt_lang:
             return texts
 
-        if self.ci_mode:
-            return [f"[CI MOCK] {tgt_lang}: {t}" if t.strip() else t for t in texts]
-            
         # Map languages to NLLB-200 code
         lang_codes = {
             "Marathi": "mar_Deva",
@@ -231,9 +217,6 @@ class ModelManager:
         
         if not src_code or not tgt_code:
             raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
-            
-        if src_lang == tgt_lang:
-            return texts
             
         # Filter out empty/whitespace-only texts but keep track of indices to restore them
         non_empty_indices = []
@@ -281,7 +264,7 @@ class ModelManager:
                     
             return results
 
-    def text_to_speech(self, text, lang, output_path):
+    def text_to_speech(self, text, lang, output_path, speed=1.0):
         if not text.strip():
             raise ValueError("Empty text provided for TTS")
             
@@ -298,7 +281,7 @@ class ModelManager:
 
         with self.lock:
             model, tokenizer = self.get_tts(lang)
-            print(f"[*] Synthesizing speech for text in {lang}...")
+            print(f"[*] Synthesizing speech for text in {lang} (speed={speed})...")
             
             inputs = tokenizer(text, return_tensors="pt").to(self.device)
             
@@ -308,6 +291,15 @@ class ModelManager:
             # Convert PyTorch tensor to numpy array (1D)
             waveform_numpy = output.cpu().numpy().squeeze()
             
+            # Apply speed adjustment if not 1.0
+            # We use simple linear resampling for speed control
+            if speed != 1.0:
+                import scipy.interpolate
+                x = np.arange(len(waveform_numpy))
+                new_x = np.linspace(0, len(waveform_numpy)-1, int(len(waveform_numpy) / speed))
+                f = scipy.interpolate.interp1d(x, waveform_numpy)
+                waveform_numpy = f(new_x).astype(np.float32)
+
             # MMS-TTS models output sample rate is 16000Hz
             sf.write(output_path, waveform_numpy, samplerate=16000)
             print(f"[✓] TTS audio written to: {output_path}")

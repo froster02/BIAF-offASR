@@ -9,6 +9,34 @@ import numpy as np
 # Lazy import for EasyOCR to avoid slow startup if not used
 _easyocr_reader = None
 
+def extract_preview_text(path, ext):
+    """Extract first 1000 characters to detect language"""
+    try:
+        if ext == ".docx":
+            doc = Document(path)
+            return " ".join([p.text for p in doc.paragraphs[:5]])[:1000]
+        elif ext == ".pptx":
+            prs = Presentation(path)
+            text = []
+            for slide in prs.slides[:3]:
+                for shape in slide.shapes:
+                    if hasattr(shape, "text_frame") and shape.text_frame:
+                        text.append(shape.text_frame.text)
+            return " ".join(text)[:1000]
+        elif ext == ".pdf":
+            doc = fitz.open(path)
+            text = ""
+            for i in range(min(3, len(doc))):
+                text += doc[i].get_text()
+            doc.close()
+            return text[:1000]
+        elif ext == ".xlsx":
+            df = pd.read_excel(path, nrows=5)
+            return df.to_string()[:1000]
+    except Exception as e:
+        print(f"[!] Preview extraction failed: {e}")
+    return ""
+
 def get_ocr_reader():
     global _easyocr_reader
     if _easyocr_reader is None:
