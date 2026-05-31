@@ -1,7 +1,7 @@
 import os
 import shutil
 import uuid
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +25,23 @@ import auth as auth_mod
 import jobs
 import subtitles
 
-app = FastAPI(title="Offline Translation API", version="1.0.0")
+from contextlib import asynccontextmanager
+
+def clean_temp_folder():
+    """Clean the temporary workspace folder on start"""
+    if os.path.exists(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)
+    os.makedirs(TEMP_DIR, exist_ok=True)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    clean_temp_folder()
+    print("[*] Temporary folder cleared.")
+    yield
+    # Shutdown logic (if any)
+
+app = FastAPI(title="Offline Translation API", version="1.0.0", lifespan=lifespan)
 
 # Auth Endpoints
 class LoginRequest(BaseModel):
@@ -47,7 +63,6 @@ def login(req: LoginRequest):
     return {"access_token": token, "token_type": "bearer", "role": row[1]}
 
 # Dependency for protected routes
-from fastapi import Depends
 protected = [Depends(auth_mod.get_current_user)]
 admin_only = [Depends(auth_mod.require_admin)]
 
@@ -80,16 +95,14 @@ class TTSRequest(BaseModel):
     text: str
     lang: str
 
-def clean_temp_folder():
-    """Clean the temporary workspace folder on start"""
-    if os.path.exists(TEMP_DIR):
-        shutil.rmtree(TEMP_DIR)
-    os.makedirs(TEMP_DIR, exist_ok=True)
+@app.get("/health")
+def health_check():
+    print("[*] Health check hit")
+    return {"status": "healthy"}
 
-@app.on_event("startup")
-def startup_event():
-    clean_temp_folder()
-    print("[*] Temporary folder cleared.")
+@app.get("/ping")
+def ping():
+    return "pong"
 
 @app.get("/api/models-status")
 def get_models_status(user=Depends(auth_mod.get_current_user)):
@@ -563,10 +576,6 @@ async def api_translate_document(
     )
     
     return {"job_id": job_id}
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
 
 # Mount frontend build folder statically if it exists
 frontend_dist = os.path.abspath(os.path.join(BASE_DIR, "../frontend/dist"))
