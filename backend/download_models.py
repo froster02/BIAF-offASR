@@ -54,6 +54,20 @@ def download_models(target_dir="./models"):
         except Exception as e:
             print(f"[✗] Error downloading TTS {model_id}: {e}", file=sys.stderr)
 
+    # 4. EasyOCR Models (Marathi, Hindi, English)
+    print("\n[+] Downloading EasyOCR Models...")
+    try:
+        import easyocr
+        # Set EASYOCR_MODULE_PATH to make sure it downloads to the right place if the env var is not yet picked up
+        if "EASYOCR_MODULE_PATH" not in os.environ:
+             os.environ["EASYOCR_MODULE_PATH"] = os.path.join(target_dir, "easyocr")
+        
+        # This will trigger the download of models for the specified languages
+        reader = easyocr.Reader(['hi', 'mr', 'en'], gpu=False)
+        print("[✓] Successfully downloaded EasyOCR models")
+    except Exception as e:
+        print(f"[✗] Error downloading EasyOCR models: {e}", file=sys.stderr)
+
     print("\n[✓] All models downloaded successfully and cached for offline use!")
 
 if __name__ == "__main__":

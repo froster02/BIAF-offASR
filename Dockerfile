@@ -28,19 +28,27 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # Copy all source files
 COPY backend/ ./backend/
 
-# Pre-download and bake models inside the Docker image during the build stage
-# This caches them permanently in the image so they are ready instantly on startup
-RUN python backend/download_models.py backend/models
+# Create a non-root user with UID 1000 (standard for Hugging Face Spaces)
+RUN useradd -m -u 1000 user
+
+# Set environment variables for model caching in a writable location
+ENV HF_HOME=/app/backend/models/hf_cache
+ENV EASYOCR_MODULE_PATH=/app/backend/models/easyocr
+
+# Pre-download and bake models inside the Docker image
+# We run this as root but ensure the directory exists and will be chowned
+RUN mkdir -p /app/backend/models/easyocr && \
+    python backend/download_models.py backend/models
 
 # Copy the built React assets from Stage 1 into the backend's static folder
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Create a non-root user with UID 1000 (standard for Hugging Face Spaces) and set directory ownerships
-RUN useradd -m -u 1000 user && \
-    chown -R 1000:1000 /app
+# Set directory ownerships for the non-root user
+RUN chown -R 1000:1000 /app
 
 # Switch to the non-root user
 USER user
+ENV HOME=/home/user
 ENV PATH="/home/user/.local/bin:$PATH"
 
 # Expose port 7860

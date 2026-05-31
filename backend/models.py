@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import soundfile as sf
 import threading
+import gc
 from transformers import (
     pipeline,
     AutoModelForSeq2SeqLM,
@@ -11,6 +12,10 @@ from transformers import (
     WhisperProcessor,
     WhisperForConditionalGeneration
 )
+
+# Optimize Torch for CPU-only environments like HF Spaces
+if not torch.cuda.is_available():
+    torch.set_num_threads(int(os.cpu_count() or 1))
 
 class ModelManager:
     def __init__(self, cache_dir="./models"):
@@ -30,6 +35,7 @@ class ModelManager:
             self.device = "cpu"
             
         print(f"[*] ModelManager initialized using device: {self.device} (CI_MODE={self.ci_mode})")
+        print(f"[*] Cache directory: {self.cache_dir}")
         
         # Lazy load containers
         self.whisper_pipe = {}
@@ -38,25 +44,45 @@ class ModelManager:
         self.tts_models = {}
         self.tts_tokenizers = {}
 
+    def _clear_memory(self):
+        """Force garbage collection and clear torch cache if on GPU"""
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif self.device == "mps":
+            torch.mps.empty_cache()
+
     def get_whisper(self, size="base"):
         with self.lock:
             if size not in self.whisper_pipe:
                 model_id = f"openai/whisper-{size}"
                 print(f"[*] Loading STT model {model_id} from {self.cache_dir} on {self.device}...")
                 
-                # Load processor & model from local cache
-                processor = WhisperProcessor.from_pretrained(model_id, cache_dir=self.cache_dir)
-                model = WhisperForConditionalGeneration.from_pretrained(model_id, cache_dir=self.cache_dir)
-                
-                # Pipeline does chunking automatically for long files
-                self.whisper_pipe[size] = pipeline(
-                    "automatic-speech-recognition",
-                    model=model,
-                    tokenizer=processor.tokenizer,
-                    feature_extractor=processor.feature_extractor,
-                    chunk_length_s=30,
-                    device=0 if self.device == "cuda" else (-1 if self.device == "cpu" else "mps")
-                )
+                try:
+                    # Load processor & model from local cache
+                    processor = WhisperProcessor.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
+                    model = WhisperForConditionalGeneration.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
+                    
+                    # Pipeline does chunking automatically for long files
+                    self.whisper_pipe[size] = pipeline(
+                        "automatic-speech-recognition",
+                        model=model,
+                        tokenizer=processor.tokenizer,
+                        feature_extractor=processor.feature_extractor,
+                        chunk_length_s=30,
+                        device=0 if self.device == "cuda" else (-1 if self.device == "cpu" else "mps")
+                    )
+                    print(f"[✓] Whisper-{size} loaded successfully.")
+                except Exception as e:
+                    print(f"[!] Error loading Whisper-{size}: {e}")
+                    # Try without local_files_only as fallback
+                    self.whisper_pipe[size] = pipeline(
+                        "automatic-speech-recognition",
+                        model=model_id,
+                        cache_dir=self.cache_dir,
+                        chunk_length_s=30,
+                        device=0 if self.device == "cuda" else (-1 if self.device == "cpu" else "mps")
+                    )
             return self.whisper_pipe[size]
 
     def get_nllb(self):
@@ -64,8 +90,14 @@ class ModelManager:
             if self.nllb_model is None:
                 model_id = "facebook/nllb-200-distilled-600M"
                 print(f"[*] Loading NLLB-200 translation model from {self.cache_dir} on {self.device}...")
-                self.nllb_tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir)
-                self.nllb_model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=self.cache_dir).to(self.device)
+                try:
+                    self.nllb_tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
+                    self.nllb_model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True).to(self.device)
+                    print("[✓] NLLB-200 loaded successfully.")
+                except Exception as e:
+                    print(f"[!] Error loading NLLB-200: {e}")
+                    self.nllb_tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir)
+                    self.nllb_model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=self.cache_dir).to(self.device)
             return self.nllb_model, self.nllb_tokenizer
 
     def get_tts(self, lang):
@@ -81,8 +113,14 @@ class ModelManager:
                     raise ValueError(f"Unsupported TTS language: {lang}")
                     
                 print(f"[*] Loading TTS model for {lang} ({model_id}) on {self.device}...")
-                self.tts_tokenizers[lang] = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir)
-                self.tts_models[lang] = VitsModel.from_pretrained(model_id, cache_dir=self.cache_dir).to(self.device)
+                try:
+                    self.tts_tokenizers[lang] = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
+                    self.tts_models[lang] = VitsModel.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True).to(self.device)
+                    print(f"[✓] TTS model for {lang} loaded successfully.")
+                except Exception as e:
+                    print(f"[!] Error loading TTS for {lang}: {e}")
+                    self.tts_tokenizers[lang] = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir)
+                    self.tts_models[lang] = VitsModel.from_pretrained(model_id, cache_dir=self.cache_dir).to(self.device)
                 
             return self.tts_models[lang], self.tts_tokenizers[lang]
 
@@ -122,6 +160,7 @@ class ModelManager:
                 stride_length_s=5,
                 generate_kwargs=gen_kwargs
             )
+            self._clear_memory()
             
             # Extract segments from chunks
             chunks = result.get("chunks", [])
@@ -193,6 +232,7 @@ class ModelManager:
                 )
                 
             translated_text = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+            self._clear_memory()
             return translated_text
 
     def translate_batch(self, texts, src_lang, tgt_lang):
@@ -252,6 +292,7 @@ class ModelManager:
                 )
                 
             translated_texts = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
+            self._clear_memory()
             
             # Map back to full results list
             for i, idx in enumerate(non_empty_indices):
@@ -302,5 +343,6 @@ class ModelManager:
 
             # MMS-TTS models output sample rate is 16000Hz
             sf.write(output_path, waveform_numpy, samplerate=16000)
+            self._clear_memory()
             print(f"[✓] TTS audio written to: {output_path}")
             return output_path
