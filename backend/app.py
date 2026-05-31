@@ -1,11 +1,21 @@
 import os
 import shutil
 import uuid
+import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("baif-api")
+
 try:
     from langdetect import detect, DetectorFactory
     DetectorFactory.seed = 0
@@ -36,10 +46,12 @@ def clean_temp_folder():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
+    logger.info("Application starting up...")
     clean_temp_folder()
-    print("[*] Temporary folder cleared.")
+    logger.info("Temporary folder cleared.")
     yield
     # Shutdown logic (if any)
+    logger.info("Application shutting down...")
 
 app = FastAPI(title="Offline Translation API", version="1.0.0", lifespan=lifespan)
 
@@ -97,7 +109,7 @@ class TTSRequest(BaseModel):
 
 @app.get("/health")
 def health_check():
-    print("[*] Health check hit")
+    logger.info("Health check hit")
     return {"status": "healthy"}
 
 @app.get("/ping")
