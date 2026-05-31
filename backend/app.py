@@ -13,18 +13,17 @@ except ImportError:
     def detect(text: str) -> str:
         return "en"
 
-try:
-    import models
-    import document_utils
-    import auth as auth_mod
-    import jobs
-    import subtitles
-except ImportError:
-    from . import models
-    from . import document_utils
-    from . import auth as auth_mod
-    from . import jobs
-    from . import subtitles
+import sys
+# Ensure the backend directory is in the path for absolute imports
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+import models
+import document_utils
+import auth as auth_mod
+import jobs
+import subtitles
 
 app = FastAPI(title="Offline Translation API", version="1.0.0")
 
