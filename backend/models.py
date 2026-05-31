@@ -4,14 +4,6 @@ import numpy as np
 import soundfile as sf
 import threading
 import gc
-from transformers import (
-    pipeline,
-    AutoModelForSeq2SeqLM,
-    AutoTokenizer,
-    VitsModel,
-    WhisperProcessor,
-    WhisperForConditionalGeneration
-)
 
 # Optimize Torch for CPU-only environments like HF Spaces
 if not torch.cuda.is_available():
@@ -55,15 +47,15 @@ class ModelManager:
     def get_whisper(self, size="base"):
         with self.lock:
             if size not in self.whisper_pipe:
+                from transformers import WhisperProcessor, WhisperForConditionalGeneration, pipeline
+
                 model_id = f"openai/whisper-{size}"
                 print(f"[*] Loading STT model {model_id} from {self.cache_dir} on {self.device}...")
                 
                 try:
-                    # Load processor & model from local cache
                     processor = WhisperProcessor.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
                     model = WhisperForConditionalGeneration.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
                     
-                    # Pipeline does chunking automatically for long files
                     self.whisper_pipe[size] = pipeline(
                         "automatic-speech-recognition",
                         model=model,
@@ -75,7 +67,6 @@ class ModelManager:
                     print(f"[✓] Whisper-{size} loaded successfully.")
                 except Exception as e:
                     print(f"[!] Error loading Whisper-{size}: {e}")
-                    # Try without local_files_only as fallback
                     self.whisper_pipe[size] = pipeline(
                         "automatic-speech-recognition",
                         model=model_id,
@@ -88,6 +79,8 @@ class ModelManager:
     def get_nllb(self):
         with self.lock:
             if self.nllb_model is None:
+                from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
                 model_id = "facebook/nllb-200-distilled-600M"
                 print(f"[*] Loading NLLB-200 translation model from {self.cache_dir} on {self.device}...")
                 try:
@@ -103,6 +96,8 @@ class ModelManager:
     def get_tts(self, lang):
         with self.lock:
             if lang not in self.tts_models:
+                from transformers import AutoTokenizer, VitsModel
+
                 model_id = {
                     "Hindi": "facebook/mms-tts-hin",
                     "Marathi": "facebook/mms-tts-mar",
