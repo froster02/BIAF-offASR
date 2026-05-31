@@ -2,7 +2,7 @@
 title: BIAF-offASR
 emoji: 🌾
 colorFrom: green
-colorTo: lightgray
+colorTo: gray
 sdk: docker
 app_port: 8000
 pinned: false
