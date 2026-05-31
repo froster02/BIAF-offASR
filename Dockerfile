@@ -50,5 +50,5 @@ EXPOSE 7860
 ENV PORT=7860
 
 # Start Uvicorn serving both backend endpoints and compiled static UI
-CMD ["sh", "-c", "uvicorn app:app --app-dir backend --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn backend.app:app --host 0.0.0.0 --port ${PORT}"]
 

@@ -14,17 +14,17 @@ except ImportError:
         return "en"
 
 try:
+    import models
+    import document_utils
+    import auth as auth_mod
+    import jobs
+    import subtitles
+except ImportError:
     from . import models
     from . import document_utils
     from . import auth as auth_mod
     from . import jobs
     from . import subtitles
-except (ImportError, ValueError):
-    from backend import models
-    from backend import document_utils
-    from backend import auth as auth_mod
-    from backend import jobs
-    from backend import subtitles
 
 app = FastAPI(title="Offline Translation API", version="1.0.0")
 

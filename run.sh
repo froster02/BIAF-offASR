@@ -73,5 +73,5 @@ echo -e "${BLUE}[*] Press Ctrl+C to stop the server.${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 # Start Uvicorn backend (which serves the pre-built static React UI on /)
-uvicorn app:app --app-dir backend --host 0.0.0.0 --port 8000
+uvicorn backend.app:app --host 0.0.0.0 --port 8000
 
