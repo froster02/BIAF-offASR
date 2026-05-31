@@ -564,10 +564,23 @@ async def api_translate_document(
     
     return {"job_id": job_id}
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 # Mount frontend build folder statically if it exists
 frontend_dist = os.path.abspath(os.path.join(BASE_DIR, "../frontend/dist"))
+print(f"[*] Checking for frontend at: {frontend_dist}")
 if os.path.exists(frontend_dist):
+    print(f"[✓] Frontend found. Mounting at /")
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
+else:
+    print(f"[!] Frontend NOT found at {frontend_dist}")
+    @app.get("/")
+    def root_fallback():
+        return {"message": "API is running. Frontend assets not found."}
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    print(f"[*] Starting server on port {port}...")
+    uvicorn.run(app, host="0.0.0.0", port=port)
