@@ -7,8 +7,10 @@ import DocumentTranslationTab from './components/DocumentTranslationTab';
 import AudioTranslationTab from './components/AudioTranslationTab';
 import VideoTranslationTab from './components/VideoTranslationTab';
 import SettingsTab from './components/SettingsTab';
+import { LanguageProvider, useLang } from './LanguageContext';
 
-function App() {
+function AppInner() {
+  const { t } = useLang();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [auth, setAuth] = useState(() => {
     const saved = localStorage.getItem('baif_auth');
@@ -72,21 +74,21 @@ function App() {
   const [docResult, setDocResult] = useState(null);
 
   const pageTitles = {
-    dashboard: 'CSR Translation Hub',
-    text:      'Text Translator',
-    docs:      'Document Translator',
-    audio:     'Speech & Audio Dubber',
-    video:     'Video Subtitler & Dubber',
-    settings:  'App Settings & Local Models',
+    dashboard: t('page.dashboard'),
+    text:      t('page.text'),
+    docs:      t('page.docs'),
+    audio:     t('page.audio'),
+    video:     t('page.video'),
+    settings:  t('page.settings'),
   };
 
   const pageSubtitles = {
-    dashboard: 'An enterprise offline AI portal — bridging Indian regional language barriers.',
-    text:      'Translate sentences instantly across Marathi, Hindi, and English.',
-    docs:      'Translate Word, PowerPoint, Excel, and PDF files while preserving formatting.',
-    audio:     'Transcribe audio tracks, translate texts, and synthesize spoken voiceovers.',
-    video:     'Extract dialogue, burn-in subtitles, and replace spoken tracks on media files.',
-    settings:  'Configure offline hardware capabilities and model cache states.',
+    dashboard: t('page.dashboardSub'),
+    text:      t('page.textSub'),
+    docs:      t('page.docsSub'),
+    audio:     t('page.audioSub'),
+    video:     t('page.videoSub'),
+    settings:  t('page.settingsSub'),
   };
 
   const handleLogin = async (e) => {
@@ -545,11 +547,19 @@ function App() {
       <footer className="app-footer">
         <div className="footer-brand">
           <span>🌾</span>
-          Offline Translation Portal
+          {t('footer.brand')}
         </div>
-        <div className="footer-copy">© {new Date().getFullYear()} All rights reserved.</div>
+        <div className="footer-copy">© {new Date().getFullYear()} {t('footer.copyright')}</div>
       </footer>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppInner />
+    </LanguageProvider>
   );
 }
 

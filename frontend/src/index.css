@@ -226,6 +226,56 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1rem;
 }
 
+/* ─── Navbar Right Section ──────────────────────────────── */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* ─── Language Selector ──────────────────────────────────── */
+.lang-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--green-pale);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.lang-selector:hover {
+  border-color: var(--green);
+  background: var(--green-faint);
+}
+
+.lang-globe {
+  font-size: 0.9rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.lang-dropdown {
+  border: none;
+  background: transparent;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--green-dark);
+  outline: none;
+  cursor: pointer;
+  padding: 0.15rem 0.25rem;
+  min-width: 70px;
+}
+
+.lang-dropdown option {
+  color: var(--text-dark);
+  background: var(--bg-white);
+}
+
 /* ─── Status Badge ──────────────────────────────────────── */
 .navbar-status {
   display: flex;
@@ -1110,10 +1160,25 @@ input:checked + .slider {
     margin-left: 0.5rem !important;
   }
 
-  .navbar-status {
+  .navbar-right {
     order: 2 !important;
     margin-left: auto !important;
-    padding: 0.4rem !important;
+    gap: 0.4rem !important;
+  }
+
+  .lang-selector {
+    padding: 0.25rem 0.4rem !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .lang-dropdown {
+    font-size: 0.72rem !important;
+    min-width: 55px !important;
+    color: var(--green-dark) !important;
+  }
+
+  .navbar-status {
     border: none !important;
     background: transparent !important;
   }

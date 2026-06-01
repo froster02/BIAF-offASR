@@ -1,11 +1,21 @@
+import { useLang } from '../LanguageContext';
+
 export default function Navbar({ activeTab, setActiveTab, isMenuOpen, setIsMenuOpen, isConnected, auth, handleLogout }) {
+  const { t, lang, setLang } = useLang();
+
   const navItems = [
-    { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
-    { id: 'text',      icon: '✍️', label: 'Text Translate' },
-    { id: 'docs',      icon: '📄', label: 'Documents' },
-    { id: 'audio',     icon: '🎵', label: 'Audio Dub' },
-    { id: 'video',     icon: '🎬', label: 'Video Dub' },
-    { id: 'settings',  icon: '⚙️', label: 'Settings' },
+    { id: 'dashboard', icon: '🏠', label: t('nav.dashboard') },
+    { id: 'text',      icon: '✍️', label: t('nav.text') },
+    { id: 'docs',      icon: '📄', label: t('nav.docs') },
+    { id: 'audio',     icon: '🎵', label: t('nav.audio') },
+    { id: 'video',     icon: '🎬', label: t('nav.video') },
+    { id: 'settings',  icon: '⚙️', label: t('nav.settings') },
+  ];
+
+  const langOptions = [
+    { code: 'en', label: 'English' },
+    { code: 'hi', label: 'हिन्दी' },
+    { code: 'mr', label: 'मराठी' },
   ];
 
   return (
@@ -13,8 +23,8 @@ export default function Navbar({ activeTab, setActiveTab, isMenuOpen, setIsMenuO
       <div className="navbar-brand">
         <div className="navbar-logo">🌾</div>
         <div className="navbar-title">
-          <span className="navbar-title-main">OfflineASR</span>
-          <span className="navbar-title-sub">Offline AI Translation</span>
+          <span className="navbar-title-main">{t('nav.brand')}</span>
+          <span className="navbar-title-sub">{t('nav.brandSub')}</span>
         </div>
       </div>
 
@@ -44,15 +54,28 @@ export default function Navbar({ activeTab, setActiveTab, isMenuOpen, setIsMenuO
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="navbar-right">
+        <div className="lang-selector">
+          <span className="lang-globe">🌐</span>
+          <select
+            className="lang-dropdown"
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+          >
+            {langOptions.map(opt => (
+              <option key={opt.code} value={opt.code}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
         {auth && (
           <button className="btn btn-outline-white" onClick={handleLogout} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-            🚪 Logout ({auth.role})
+            🚪 {t('nav.logout')} ({auth.role})
           </button>
         )}
         <div className={`navbar-status ${isConnected ? 'online' : 'offline'}`}>
           <span className={`dot ${isConnected ? '' : 'offline'}`} />
-          <span className="status-text">{isConnected ? 'Connected' : 'Offline'}</span>
+          <span className="status-text">{isConnected ? t('nav.statusOnline') : t('nav.statusOffline')}</span>
         </div>
       </div>
     </nav>

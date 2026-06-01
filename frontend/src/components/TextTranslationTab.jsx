@@ -1,3 +1,5 @@
+import { useLang } from '../LanguageContext';
+
 export default function TextTranslationTab({
   textInput, setTextInput,
   textOutput,
@@ -8,54 +10,51 @@ export default function TextTranslationTab({
   ttsAudioUrl,
   isGeneratingTts, handleTextToSpeech,
 }) {
+  const { t } = useLang();
+
   return (
     <div className="glass-card">
       <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Source Language</label>
-          <select className="select-control" value={textSrcLang} onChange={(e) => {
-            setTextSrcLang(e.target.value);
-          }}>
-            <option value="auto">✨ Auto Detect</option>
-            <option value="English">🇬🇧 English</option>
-            <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
-            <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
+          <label className="form-label">{t('text.srcLang')}</label>
+          <select className="select-control" value={textSrcLang} onChange={(e) => setTextSrcLang(e.target.value)}>
+            <option value="auto">✨ {t('text.auto')}</option>
+            <option value="English">🇬🇧 {t('text.english')}</option>
+            <option value="Hindi">🇮🇳 {t('text.hindi')}</option>
+            <option value="Marathi">🇮🇳 {t('text.marathi')}</option>
           </select>
           {detectedTextLang && (
             <div style={{ fontSize: '0.75rem', color: 'var(--green-dark)', marginTop: '0.25rem', fontWeight: 600 }}>
-              ✨ Detected: {detectedTextLang}
+              ✨ {t('text.detected')}: {detectedTextLang}
             </div>
           )}
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Target Language</label>
+          <label className="form-label">{t('text.tgtLang')}</label>
           <select className="select-control" value={textTgtLang} onChange={(e) => setTextTgtLang(e.target.value)}>
-            <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
-            <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
-            <option value="English">🇬🇧 English</option>
+            <option value="Hindi">🇮🇳 {t('text.hindi')}</option>
+            <option value="Marathi">🇮🇳 {t('text.marathi')}</option>
+            <option value="English">🇬🇧 {t('text.english')}</option>
           </select>
         </div>
       </div>
 
       <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Original Text</label>
+          <label className="form-label">{t('text.input')}</label>
           <textarea
             className="textarea-control"
-            placeholder="Type or paste your text here..."
+            placeholder={t('text.inputPlaceholder')}
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
           />
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Translated Output</label>
-          <div
-            className="textarea-control output-box"
-            style={{ cursor: 'default' }}
-          >
+          <label className="form-label">{t('text.output')}</label>
+          <div className="textarea-control output-box" style={{ cursor: 'default' }}>
             {textOutput
               ? textOutput
-              : <span className="output-box-placeholder">Translated text will appear here...</span>
+              : <span className="output-box-placeholder">{t('text.outputPlaceholder')}</span>
             }
           </div>
         </div>
@@ -67,23 +66,23 @@ export default function TextTranslationTab({
           onClick={handleTextTranslate}
           disabled={isTranslatingText || !textInput.trim()}
         >
-          {isTranslatingText ? '⏳ Translating...' : '⚡ Translate Text'}
+          {isTranslatingText ? `⏳ ${t('text.translating')}` : `⚡ ${t('text.translate')}`}
         </button>
 
         {textOutput && (
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               className="btn btn-secondary"
-              onClick={() => { navigator.clipboard.writeText(textOutput); alert('Copied to clipboard!'); }}
+              onClick={() => { navigator.clipboard.writeText(textOutput); alert('Copied!'); }}
             >
-              📋 Copy Text
+              📋 {t('text.copy')}
             </button>
             <button
               className="btn btn-secondary"
               onClick={handleTextToSpeech}
               disabled={isGeneratingTts}
             >
-              {isGeneratingTts ? '⏳ Generating...' : '🔊 Speak Aloud (TTS)'}
+              {isGeneratingTts ? `⏳ ${t('text.ttsGenerating')}` : `🔊 ${t('text.tts')}`}
             </button>
             {ttsAudioUrl && (
               <audio src={ttsAudioUrl} controls autoPlay className="custom-audio-player" style={{ width: '220px', marginTop: 0 }} />

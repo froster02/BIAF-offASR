@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useLang } from '../LanguageContext';
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
@@ -15,6 +16,7 @@ export default function AudioTranslationTab({
   audioResult, audioActiveSubTab, setAudioActiveSubTab,
   isRecording, startRecording, stopRecording, recordingTime,
 }) {
+  const { t } = useLang();
   const audioFileInputRef = useRef(null);
 
   return (
@@ -22,23 +24,23 @@ export default function AudioTranslationTab({
       <div className="glass-card translator-grid">
         <div>
           <div className="form-group">
-            <label className="form-label">Select Languages</label>
+            <label className="form-label">{t('audio.selectLangs')}</label>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>From</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>{t('audio.from')}</span>
                 <select className="select-control" value={audioSrcLang} onChange={(e) => setAudioSrcLang(e.target.value)}>
-                  <option value="auto">✨ Auto Detect</option>
-                  <option value="English">English</option>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
+                  <option value="auto">✨ {t('text.auto')}</option>
+                  <option value="English">{t('text.english')}</option>
+                  <option value="Hindi">{t('text.hindi')}</option>
+                  <option value="Marathi">{t('text.marathi')}</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>To</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>{t('audio.to')}</span>
                 <select className="select-control" value={audioTgtLang} onChange={(e) => setAudioTgtLang(e.target.value)}>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
-                  <option value="English">English</option>
+                  <option value="Hindi">{t('text.hindi')}</option>
+                  <option value="Marathi">{t('text.marathi')}</option>
+                  <option value="English">{t('text.english')}</option>
                 </select>
               </div>
             </div>
@@ -52,9 +54,9 @@ export default function AudioTranslationTab({
               disabled={isProcessingAudio}
             >
               {isRecording ? (
-                <><span className="recording-pulse">🔴</span> Stop ({formatTime(recordingTime)})</>
+                <><span className="recording-pulse">🔴</span> {t('audio.stop')} ({formatTime(recordingTime)})</>
               ) : (
-                <>🎤 Start Recording</>
+                <>🎤 {t('audio.record')}</>
               )}
             </button>
             <button
@@ -63,7 +65,7 @@ export default function AudioTranslationTab({
               onClick={() => audioFileInputRef.current.click()}
               disabled={isRecording || isProcessingAudio}
             >
-              📁 Upload File
+              📁 {t('audio.uploadFile')}
             </button>
             <input
               type="file"
@@ -89,13 +91,13 @@ export default function AudioTranslationTab({
             disabled={!audioFile || isProcessingAudio}
             onClick={processAudio}
           >
-            {isProcessingAudio ? '⏳ Processing Audio...' : '⚙️ Transcribe & Dub Audio'}
+            {isProcessingAudio ? `⏳ ${t('audio.processing')}` : `⚙️ ${t('audio.process')}`}
           </button>
 
           {isProcessingAudio && (
             <div className="progress-panel">
               <div className="progress-header">
-                <div className="processing-pulse">🔄 Processing...</div>
+                <div className="processing-pulse">🔄 {t('common.processing')}</div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--green-dark)' }}>{audioProgress}%</div>
               </div>
               <div className="progress-bar-container">
@@ -109,7 +111,7 @@ export default function AudioTranslationTab({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="section-title">Dubbing Results</div>
+          <div className="section-title">{t('audio.results')}</div>
 
           {audioResult ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flexGrow: 1 }}>
@@ -117,11 +119,11 @@ export default function AudioTranslationTab({
                 <button
                   className={`tab-btn ${audioActiveSubTab === 'translation' ? 'active' : ''}`}
                   onClick={() => setAudioActiveSubTab('translation')}
-                >Translated Dub</button>
+                >{t('audio.tabTranslation')}</button>
                 <button
                   className={`tab-btn ${audioActiveSubTab === 'transcript' ? 'active' : ''}`}
                   onClick={() => setAudioActiveSubTab('transcript')}
-                >Original Transcript</button>
+                >{t('audio.tabTranscript')}</button>
               </div>
 
               {audioActiveSubTab === 'translation' ? (
@@ -130,22 +132,8 @@ export default function AudioTranslationTab({
                     {audioResult.translated_text}
                   </div>
                   <div>
-                    <label className="form-label" style={{ marginBottom: '0.25rem' }}>Dubbed Voice Audio</label>
+                    <label className="form-label" style={{ marginBottom: '0.25rem' }}>{t('audio.tabTranslation')}</label>
                     <audio src={audioResult.translated_audio_url} controls className="custom-audio-player" style={{ marginTop: 0 }} />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
-                    <label className="form-label" style={{ marginBottom: '0.5rem' }}>Translated Timeline</label>
-                    <div className="subtitle-editor" style={{ maxHeight: '200px' }}>
-                      {audioResult.translated_segments?.map((seg, idx) => (
-                        <div className="subtitle-segment" key={idx}>
-                          <div className="sub-time">
-                            {new Date(seg.start * 1000).toISOString().substr(14, 5)} ➔ {new Date(seg.end * 1000).toISOString().substr(14, 5)}
-                          </div>
-                          <div className="sub-text">{seg.text}</div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
               ) : (
@@ -160,7 +148,7 @@ export default function AudioTranslationTab({
                   style={{ flex: 1, textDecoration: 'none' }}
                   href={audioResult.translated_audio_url}
                   download={`dubbed_${audioTgtLang}_${audioFile?.name}.wav`}
-                >📥 Download Audio</a>
+                >📥 {t('audio.downloadAudio')}</a>
                 <button
                   className="btn btn-secondary"
                   style={{ flex: 1 }}
@@ -173,13 +161,13 @@ export default function AudioTranslationTab({
                     link.download = `${audioActiveSubTab}_transcript.txt`;
                     link.click();
                   }}
-                >📥 Download Text</button>
+                >📥 {t('audio.downloadText')}</button>
               </div>
             </div>
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">🎵</div>
-              <span>Upload an audio file and click Dub to get started.</span>
+              <span>{t('audio.empty')}</span>
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useLang } from '../LanguageContext';
 
 export default function VideoTranslationTab({
   videoFile, handleVideoUpload,
@@ -10,6 +11,7 @@ export default function VideoTranslationTab({
   videoProgress, videoProgressText,
   videoResult,
 }) {
+  const { t } = useLang();
   const videoFileInputRef = useRef(null);
 
   return (
@@ -17,23 +19,23 @@ export default function VideoTranslationTab({
       <div className="glass-card translator-grid">
         <div>
           <div className="form-group">
-            <label className="form-label">Translation Direction</label>
+            <label className="form-label">{t('video.direction')}</label>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>From</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>{t('video.from')}</span>
                 <select className="select-control" value={videoSrcLang} onChange={(e) => setVideoSrcLang(e.target.value)}>
-                  <option value="auto">✨ Auto Detect</option>
-                  <option value="English">English</option>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
+                  <option value="auto">✨ {t('text.auto')}</option>
+                  <option value="English">{t('text.english')}</option>
+                  <option value="Hindi">{t('text.hindi')}</option>
+                  <option value="Marathi">{t('text.marathi')}</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>To</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>{t('video.to')}</span>
                 <select className="select-control" value={videoTgtLang} onChange={(e) => setVideoTgtLang(e.target.value)}>
-                  <option value="Hindi">Hindi</option>
-                  <option value="Marathi">Marathi</option>
-                  <option value="English">English</option>
+                  <option value="Hindi">{t('text.hindi')}</option>
+                  <option value="Marathi">{t('text.marathi')}</option>
+                  <option value="English">{t('text.english')}</option>
                 </select>
               </div>
             </div>
@@ -45,8 +47,8 @@ export default function VideoTranslationTab({
             style={{ padding: '2.5rem 2rem' }}
           >
             <div className="dropzone-icon">🎬</div>
-            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click to browse video files</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Supports MP4, MOV, AVI, WMV, MKV, WebM</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{t('video.browse')}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('video.supported')}</div>
             <input
               type="file"
               ref={videoFileInputRef}
@@ -68,8 +70,8 @@ export default function VideoTranslationTab({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.25rem' }}>
             <div className="switch-container">
               <div className="switch-label-group">
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Burn-in Subtitles</span>
-                <span className="switch-subtext">Renders translated text directly onto the video frames.</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{t('video.burnSubs')}</span>
+                <span className="switch-subtext">{t('video.burnSubsDesc')}</span>
               </div>
               <label className="switch">
                 <input type="checkbox" checked={burnSubtitles} onChange={(e) => setBurnSubtitles(e.target.checked)} />
@@ -79,8 +81,8 @@ export default function VideoTranslationTab({
 
             <div className="switch-container">
               <div className="switch-label-group">
-                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>Voice Dubbing Overlay</span>
-                <span className="switch-subtext">Overlay synthetic voiceover and mute original track.</span>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-dark)' }}>{t('video.voiceOverlay')}</span>
+                <span className="switch-subtext">{t('video.voiceOverlayDesc')}</span>
               </div>
               <label className="switch">
                 <input type="checkbox" checked={overlayVoice} onChange={(e) => setOverlayVoice(e.target.checked)} />
@@ -95,13 +97,13 @@ export default function VideoTranslationTab({
             disabled={!videoFile || isProcessingVideo}
             onClick={processVideo}
           >
-            {isProcessingVideo ? '⏳ Processing Video...' : '⚡ Process & Dub Video'}
+            {isProcessingVideo ? `⏳ ${t('video.processing')}` : `⚡ ${t('video.process')}`}
           </button>
 
           {isProcessingVideo && (
             <div className="progress-panel">
               <div className="progress-header">
-                <div className="processing-pulse">🎞️ Rendering...</div>
+                <div className="processing-pulse">🎞️ {t('common.processing')}</div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--green-dark)' }}>{videoProgress}%</div>
               </div>
               <div className="progress-bar-container">
@@ -115,14 +117,14 @@ export default function VideoTranslationTab({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="section-title">Output Preview</div>
+          <div className="section-title">{t('video.preview')}</div>
 
           {videoResult ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flexGrow: 1 }}>
               <video src={videoResult.video_url} controls className="custom-video-player" />
 
               <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                <label className="form-label" style={{ marginBottom: '0.5rem' }}>Synchronized Subtitle Segments</label>
+                <label className="form-label" style={{ marginBottom: '0.5rem' }}>{t('video.preview')}</label>
                 <div className="subtitle-editor">
                   {videoResult.translated_srt.split('\n\n').filter(Boolean).map((block, idx) => {
                     const lines = block.split('\n');
@@ -144,19 +146,19 @@ export default function VideoTranslationTab({
                   style={{ flex: 1, textDecoration: 'none' }}
                   href={videoResult.video_url}
                   download={`translated_${videoTgtLang}_${videoFile?.name}`}
-                >📥 Download Video (.mp4)</a>
+                >📥 {t('video.downloadVideo')}</a>
                 <a
                   className="btn btn-secondary"
                   style={{ flex: 1, textDecoration: 'none', textAlign: 'center' }}
                   href={videoResult.srt_url}
                   download={`subtitles_${videoTgtLang}_${videoFile?.name?.split('.')[0]}.srt`}
-                >📄 Download SRT Subs</a>
+                >📄 {t('video.downloadSrt')}</a>
               </div>
             </div>
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">🎬</div>
-              <span>Upload a video file and click Process to get started.</span>
+              <span>{t('video.empty')}</span>
             </div>
           )}
         </div>

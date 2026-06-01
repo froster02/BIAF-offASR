@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useLang } from '../LanguageContext';
 
 export default function DocumentTranslationTab({
   docFile, handleDocUpload,
@@ -7,31 +8,32 @@ export default function DocumentTranslationTab({
   isProcessingDoc, processDoc,
   docResult,
 }) {
+  const { t } = useLang();
   const docFileInputRef = useRef(null);
 
   return (
     <div className="glass-card">
       <div className="translator-grid" style={{ marginBottom: '1.5rem' }}>
         <div className="form-group">
-          <label className="form-label">Source Language</label>
+          <label className="form-label">{t('docs.srcLang')}</label>
           <select className="select-control" value={docSrcLang} onChange={(e) => setDocSrcLang(e.target.value)}>
-            <option value="auto">✨ Auto Detect</option>
-            <option value="English">🇬🇧 English</option>
-            <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
-            <option value="Marathi">🇮🇳 Marathi (मराठी)</option>
+            <option value="auto">✨ {t('docs.auto')}</option>
+            <option value="English">🇬🇧 {t('docs.english')}</option>
+            <option value="Hindi">🇮🇳 {t('docs.hindi')}</option>
+            <option value="Marathi">🇮🇳 {t('docs.marathi')}</option>
           </select>
           {docResult?.detected_src_lang && (
             <div style={{ fontSize: '0.75rem', color: 'var(--green-dark)', marginTop: '0.25rem', fontWeight: 600 }}>
-              ✨ Detected: {docResult.detected_src_lang}
+              ✨ {t('text.detected')}: {docResult.detected_src_lang}
             </div>
           )}
         </div>
         <div className="form-group">
-          <label className="form-label">Target Language</label>
+          <label className="form-label">{t('docs.tgtLang')}</label>
           <select className="select-control" value={docTgtLang} onChange={(e) => setDocTgtLang(e.target.value)}>
-            <option value="Hindi">Hindi</option>
-            <option value="Marathi">Marathi</option>
-            <option value="English">English</option>
+            <option value="Hindi">{t('docs.hindi')}</option>
+            <option value="Marathi">{t('docs.marathi')}</option>
+            <option value="English">{t('docs.english')}</option>
           </select>
         </div>
       </div>
@@ -42,8 +44,8 @@ export default function DocumentTranslationTab({
         style={{ marginBottom: '1.5rem' }}
       >
         <div className="dropzone-icon">📄</div>
-        <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>Click to upload documents</div>
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Supports .docx, .pptx, .xlsx, .pdf</div>
+        <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{t('docs.browse')}</div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t('docs.supported')}</div>
         <input
           type="file"
           ref={docFileInputRef}
@@ -66,19 +68,19 @@ export default function DocumentTranslationTab({
         disabled={!docFile || isProcessingDoc}
         onClick={processDoc}
       >
-        {isProcessingDoc ? '⏳ Processing Document...' : '⚡ Translate Document'}
+        {isProcessingDoc ? `⏳ ${t('docs.processing')}` : `⚡ ${t('docs.translate')}`}
       </button>
 
       {docResult && (
         <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-          <div className="status-ok" style={{ marginBottom: '1rem' }}>✓ Translation Complete!</div>
+          <div className="status-ok" style={{ marginBottom: '1rem' }}>✓ {t('docs.complete')}</div>
           <a
             href={docResult.output_url}
             className="btn btn-secondary"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
             download
           >
-            📥 Download Translated {docFile?.name?.split('.').pop()?.toUpperCase()}
+            📥 {t('docs.download')} {docFile?.name?.split('.').pop()?.toUpperCase()}
           </a>
         </div>
       )}
