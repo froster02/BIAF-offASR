@@ -1,9 +1,18 @@
 import os
+import logging
 import torch
 import numpy as np
 import soundfile as sf
 import threading
 import gc
+
+logger = logging.getLogger(__name__)
+
+NLLB_LANG_CODES = {
+    "Marathi": "mar_Deva",
+    "Hindi": "hin_Deva",
+    "English": "eng_Latn",
+}
 
 # Optimize Torch for CPU-only environments like HF Spaces
 if not torch.cuda.is_available():
@@ -26,8 +35,8 @@ class ModelManager:
         else:
             self.device = "cpu"
             
-        print(f"[*] ModelManager initialized using device: {self.device} (CI_MODE={self.ci_mode})")
-        print(f"[*] Cache directory: {self.cache_dir}")
+        logger.info("ModelManager initialized using device: %s (CI_MODE=%s)", self.device, self.ci_mode)
+        logger.info("Cache directory: %s", self.cache_dir)
         
         # Lazy load containers
         self.whisper_pipe = {}
@@ -50,7 +59,7 @@ class ModelManager:
                 from transformers import WhisperProcessor, WhisperForConditionalGeneration, pipeline
 
                 model_id = f"openai/whisper-{size}"
-                print(f"[*] Loading STT model {model_id} from {self.cache_dir} on {self.device}...")
+                logger.info("Loading STT model %s from %s on %s...", model_id, self.cache_dir, self.device)
                 
                 try:
                     processor = WhisperProcessor.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
@@ -64,9 +73,9 @@ class ModelManager:
                         chunk_length_s=30,
                         device=0 if self.device == "cuda" else (-1 if self.device == "cpu" else "mps")
                     )
-                    print(f"[✓] Whisper-{size} loaded successfully.")
+                    logger.info("Whisper-%s loaded successfully.", size)
                 except Exception as e:
-                    print(f"[!] Error loading Whisper-{size}: {e}")
+                    logger.error("Error loading Whisper-%s: %s", size, e)
                     self.whisper_pipe[size] = pipeline(
                         "automatic-speech-recognition",
                         model=model_id,
@@ -82,13 +91,13 @@ class ModelManager:
                 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
                 model_id = "facebook/nllb-200-distilled-600M"
-                print(f"[*] Loading NLLB-200 translation model from {self.cache_dir} on {self.device}...")
+                logger.info("Loading NLLB-200 translation model from %s on %s...", self.cache_dir, self.device)
                 try:
                     self.nllb_tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
                     self.nllb_model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True).to(self.device)
-                    print("[✓] NLLB-200 loaded successfully.")
+                    logger.info("NLLB-200 loaded successfully.")
                 except Exception as e:
-                    print(f"[!] Error loading NLLB-200: {e}")
+                    logger.error("Error loading NLLB-200: %s", e)
                     self.nllb_tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir)
                     self.nllb_model = AutoModelForSeq2SeqLM.from_pretrained(model_id, cache_dir=self.cache_dir).to(self.device)
             return self.nllb_model, self.nllb_tokenizer
@@ -107,13 +116,13 @@ class ModelManager:
                 if not model_id:
                     raise ValueError(f"Unsupported TTS language: {lang}")
                     
-                print(f"[*] Loading TTS model for {lang} ({model_id}) on {self.device}...")
+                logger.info("Loading TTS model for %s (%s) on %s...", lang, model_id, self.device)
                 try:
                     self.tts_tokenizers[lang] = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True)
                     self.tts_models[lang] = VitsModel.from_pretrained(model_id, cache_dir=self.cache_dir, local_files_only=True).to(self.device)
-                    print(f"[✓] TTS model for {lang} loaded successfully.")
+                    logger.info("TTS model for %s loaded successfully.", lang)
                 except Exception as e:
-                    print(f"[!] Error loading TTS for {lang}: {e}")
+                    logger.error("Error loading TTS for %s: %s", lang, e)
                     self.tts_tokenizers[lang] = AutoTokenizer.from_pretrained(model_id, cache_dir=self.cache_dir)
                     self.tts_models[lang] = VitsModel.from_pretrained(model_id, cache_dir=self.cache_dir).to(self.device)
                 
@@ -138,7 +147,8 @@ class ModelManager:
             }.get(language)
             
             pipe = self.get_whisper(size)
-            print(f"[*] Transcribing {audio_path} using Whisper-{size} (language={'auto' if lang_code is None else lang_code})...")
+            lang_label = "auto" if lang_code is None else lang_code
+            logger.info("Transcribing %s using Whisper-%s (language=%s)...", audio_path, size, lang_label)
             
             # Run Whisper ASR pipeline with timestamps
             gen_kwargs = {"return_timestamps": True}
@@ -210,7 +220,7 @@ class ModelManager:
             
         with self.lock:
             model, tokenizer = self.get_nllb()
-            print(f"[*] Translating text using NLLB-200 ({src_code} -> {tgt_code})...")
+            logger.info("Translating text using NLLB-200 (%s -> %s)...", src_code, tgt_code)
             
             # Tokenize and force generation in target language
             tokenizer.src_lang = src_code
@@ -241,14 +251,8 @@ class ModelManager:
             return texts
 
         # Map languages to NLLB-200 code
-        lang_codes = {
-            "Marathi": "mar_Deva",
-            "Hindi": "hin_Deva",
-            "English": "eng_Latn"
-        }
-        
-        src_code = lang_codes.get(src_lang)
-        tgt_code = lang_codes.get(tgt_lang)
+        src_code = NLLB_LANG_CODES.get(src_lang)
+        tgt_code = NLLB_LANG_CODES.get(tgt_lang)
         
         if not src_code or not tgt_code:
             raise ValueError(f"Unsupported translation languages: {src_lang} -> {tgt_lang}")
@@ -271,7 +275,7 @@ class ModelManager:
             
         with self.lock:
             model, tokenizer = self.get_nllb()
-            print(f"[*] Batch translating {len(non_empty_texts)} items using NLLB-200 ({src_code} -> {tgt_code})...")
+            logger.info("Batch translating %d items using NLLB-200 (%s -> %s)...", len(non_empty_texts), src_code, tgt_code)
             
             tokenizer.src_lang = src_code
             inputs = tokenizer(non_empty_texts, return_tensors="pt", padding=True).to(self.device)
@@ -309,15 +313,14 @@ class ModelManager:
             raise ValueError(f"Unsupported TTS language: {lang}")
 
         if self.ci_mode:
-            # Generate a small dummy wav file (1 second of silence at 16kHz)
-            print(f"[*] [CI MOCK] Generating dummy TTS for {lang}...")
+            logger.debug("[CI MOCK] Generating dummy TTS for %s...", lang)
             dummy_data = np.zeros(16000)
             sf.write(output_path, dummy_data, 16000)
             return output_path
 
         with self.lock:
             model, tokenizer = self.get_tts(lang)
-            print(f"[*] Synthesizing speech for text in {lang} (speed={speed})...")
+            logger.info("Synthesizing speech for text in %s (speed=%s)...", lang, speed)
             
             inputs = tokenizer(text, return_tensors="pt").to(self.device)
             
@@ -339,5 +342,5 @@ class ModelManager:
             # MMS-TTS models output sample rate is 16000Hz
             sf.write(output_path, waveform_numpy, samplerate=16000)
             self._clear_memory()
-            print(f"[✓] TTS audio written to: {output_path}")
+            logger.info("TTS audio written to: %s", output_path)
             return output_path

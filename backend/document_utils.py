@@ -1,10 +1,12 @@
 import os
+import logging
 from docx import Document
 from pptx import Presentation
 import fitz  # PyMuPDF
 import pandas as pd
 from openpyxl import load_workbook
-import numpy as np
+
+logger = logging.getLogger(__name__)
 
 # Lazy import for EasyOCR to avoid slow startup if not used
 _easyocr_reader = None
@@ -34,7 +36,7 @@ def extract_preview_text(path, ext):
             df = pd.read_excel(path, nrows=5)
             return df.to_string()[:1000]
     except Exception as e:
-        print(f"[!] Preview extraction failed: {e}")
+        logger.warning("Preview extraction failed: %s", e)
     return ""
 
 def get_ocr_reader():
@@ -79,7 +81,7 @@ def ocr_and_translate_page(page, model_manager, src_lang, tgt_lang):
                 # Just overlay the text
                 page.insert_textbox(rect, translated, fontsize=10, fontname="helv")
     except Exception as e:
-        print(f"[!] OCR overlay failed: {e}")
+        logger.warning("OCR overlay failed: %s", e)
 
 def translate_docx(input_path, output_path, model_manager, src_lang, tgt_lang):
     doc = Document(input_path)

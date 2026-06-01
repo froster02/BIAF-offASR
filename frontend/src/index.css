@@ -837,13 +837,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tab-btn:hover {
-  color: var(--baif-green-dark);
-  background: var(--baif-green-pale);
+  color: var(--green-dark);
+  background: var(--green-pale);
 }
 
 .tab-btn.active {
-  color: var(--baif-green-dark);
-  background: var(--baif-green-pale);
+  color: var(--green-dark);
+  background: var(--green-pale);
 }
 
 .tab-btn.active::after {
@@ -946,16 +946,16 @@ input:checked + .slider {
 }
 
 .subtitle-segment:hover {
-  background: var(--baif-green-pale);
+  background: var(--green-pale);
   border-color: var(--border-strong);
 }
 
 .sub-time {
   font-family: 'Courier New', monospace;
   font-size: 0.75rem;
-  color: var(--baif-green-dark);
+  color: var(--green-dark);
   min-width: 110px;
-  background: var(--baif-green-pale);
+  background: var(--green-pale);
   padding: 0.2rem 0.45rem;
   border-radius: 4px;
   font-weight: 600;
@@ -998,11 +998,11 @@ input:checked + .slider {
 .status-ok {
   font-weight: 600;
   font-size: 0.82rem;
-  color: var(--baif-green-dark);
-  background: var(--baif-green-pale);
+  color: var(--green-dark);
+  background: var(--green-pale);
   padding: 0.2rem 0.65rem;
   border-radius: 50px;
-  border: 1px solid var(--baif-green-light);
+  border: 1px solid var(--green-light);
 }
 
 .status-warn {
@@ -1045,7 +1045,7 @@ input:checked + .slider {
   color: var(--text-muted);
   gap: 0.75rem;
   font-size: 0.9rem;
-  background: var(--baif-green-faint);
+  background: var(--green-faint);
 }
 
 .empty-state-icon {
@@ -1088,19 +1088,6 @@ input:checked + .slider {
   gap: 1.25rem;
 }
 
-/* ─── Mobile Menu Toggle ─────────────────────────────── */
-.mobile-menu-toggle {
-  display: none;
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--green-dark);
-  cursor: pointer;
-  padding: 0.5rem;
-  z-index: 1001;
-}
-
-/* ─── Responsive ────────────────────────────────────────── */
 /* ─── Responsive ────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .navbar {

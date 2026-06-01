@@ -1,6 +1,5 @@
 import os
 import sys
-import torch
 
 # Add backend to path so we can import models robustly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

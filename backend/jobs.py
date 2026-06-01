@@ -1,6 +1,5 @@
 import uuid
 import threading
-import time
 
 class JobManager:
     def __init__(self):
@@ -32,12 +31,5 @@ class JobManager:
     def get_job(self, job_id):
         with self.lock:
             return self.jobs.get(job_id)
-
-    def cleanup_old_jobs(self, max_age=3600):
-        now = time.time()
-        with self.lock:
-            to_delete = [jid for jid, j in self.jobs.items() if now - j["created_at"] > max_age]
-            for jid in to_delete:
-                del self.jobs[jid]
 
 job_manager = JobManager()

@@ -2,12 +2,17 @@ import sqlite3
 import jwt
 import datetime
 import os
+import logging
 from passlib.context import CryptContext
 from fastapi import HTTPException, Security, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+logger = logging.getLogger(__name__)
+
 # Configuration
-SECRET_KEY = "baif_offline_portal_secure_secret_key_32_chars_long!" # In production, this should be an env var
+SECRET_KEY = os.environ.get("JWT_SECRET", "baif_offline_portal_secure_secret_key_32_chars_long!")
+if SECRET_KEY == "baif_offline_portal_secure_secret_key_32_chars_long!":
+    logger.warning("Using default JWT secret. Set JWT_SECRET env var in production.")
 ALGORITHM = "HS256"
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
@@ -41,9 +46,6 @@ def get_db_conn():
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
@@ -71,5 +73,5 @@ def require_admin(user = Depends(get_current_user)):
 
 try:
     init_db()
-except Exception:
-    pass
+except Exception as e:
+    logger.warning("Failed to initialize database: %s", e)

@@ -1,6 +1,9 @@
 import os
 import subprocess
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 def format_time(seconds, is_vtt=False):
     """
@@ -51,7 +54,7 @@ def run_ffmpeg_command(cmd, cwd=None):
     if not shutil.which("ffmpeg"):
         raise RuntimeError("ffmpeg executable not found in system PATH. Please install FFmpeg.")
         
-    print(f"[*] Running FFmpeg: {' '.join(cmd)}")
+    logger.info("Running FFmpeg: %s", " ".join(cmd))
     result = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
@@ -61,7 +64,7 @@ def run_ffmpeg_command(cmd, cwd=None):
     )
     
     if result.returncode != 0:
-        print(f"[✗] FFmpeg Error: {result.stderr}")
+        logger.error("FFmpeg Error: %s", result.stderr)
         raise RuntimeError(f"FFmpeg failed with return code {result.returncode}: {result.stderr}")
     return True
 
@@ -181,7 +184,7 @@ def merge_audio_segments(segments, session_dir, model_manager, tgt_lang):
         # 3. If generated audio is too long, speed it up to fit target duration
         if generated_duration > target_duration and target_duration > 0:
             import scipy.interpolate
-            print(f"[*] Speeding up segment {i} ({generated_duration:.2f}s -> {target_duration:.2f}s)")
+            logger.info("Speeding up segment %d (%.2fs -> %.2fs)", i, generated_duration, target_duration)
             x = np.arange(len(data))
             new_x = np.linspace(0, len(data)-1, int(target_duration * sample_rate))
             f = scipy.interpolate.interp1d(x, data)

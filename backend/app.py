@@ -4,7 +4,7 @@ import uuid
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -160,7 +160,7 @@ def detect_language_safe(text: str) -> str:
             "mr": "Marathi"
         }
         return mapping.get(lang_code, "English") # Default to English
-    except:
+    except Exception:
         return "English"
 
 @app.post("/api/detect-language")
@@ -190,7 +190,7 @@ def translate_text(req: TranslationRequest, user=Depends(auth_mod.get_current_us
         translated = model_manager.translate(req.text, src_lang, req.tgt_lang)
         return {"translated_text": translated, "detected_src_lang": src_lang}
     except Exception as e:
-        print(f"[Error] /api/translate-text: {e}")
+        logger.error("Error in /api/translate-text: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/transcribe-audio")
@@ -222,7 +222,7 @@ async def transcribe_audio(
         # If it's a video file, extract audio track using FFmpeg
         is_video = file_ext in [".mp4", ".mov", ".avi", ".wmv", ".mkv", ".flv", ".webm"]
         if is_video:
-            print(f"[*] Input is a video file. Extracting audio stream...")
+            logger.info("Input is a video file. Extracting audio stream...")
             audio_path = os.path.join(session_dir, "extracted_audio.wav")
             subtitles.extract_audio(input_path, audio_path)
             
@@ -246,7 +246,7 @@ async def transcribe_audio(
         }
         
     except Exception as e:
-        print(f"[Error] /api/transcribe-audio: {e}")
+        logger.error("Error in /api/transcribe-audio: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/translate-audio")
@@ -341,7 +341,7 @@ async def translate_audio(
         }
         
     except Exception as e:
-        print(f"[Error] /api/translate-audio: {e}")
+        logger.error("Error in /api/translate-audio: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/text-to-speech")
@@ -362,7 +362,7 @@ def text_to_speech(req: TTSRequest, user=Depends(auth_mod.get_current_user)):
             filename=f"translated_speech_{req.lang.lower()}.wav"
         )
     except Exception as e:
-        print(f"[Error] /api/text-to-speech: {e}")
+        logger.error("Error in /api/text-to-speech: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, model_size, src_lang, tgt_lang, burn_subtitles_option, overlay_voice_option):
@@ -412,7 +412,7 @@ def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, 
         # 4. Generate subtitles-burned video
         current_video_stream = input_path
         if burn_subtitles_option:
-            print("[*] Burning subtitles into video stream...")
+            logger.info("Burning subtitles into video stream...")
             burned_video_path = os.path.join(session_dir, "burned_subtitles.mp4")
             subtitles.burn_subtitles(input_path, translated_srt_path, burned_video_path)
             current_video_stream = burned_video_path
@@ -422,7 +422,7 @@ def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, 
         output_video_filename = ""
         full_translated_text = ""
         if overlay_voice_option:
-            print("[*] Generating voiceover segments and overlaying...")
+            logger.info("Generating voiceover segments and overlaying...")
             # Enhanced synchronization: synthesize each segment and merge them at correct timestamps
             tts_audio_path = subtitles.merge_audio_segments(translated_segments, session_dir, model_manager, tgt_lang)
             
@@ -452,10 +452,9 @@ def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, 
             }
         )
     except Exception as e:
-        print(f"[Error] Job {job_id}: {e}")
+        logger.error("Error in job %s: %s", job_id, e)
         jobs.job_manager.update_job(job_id, status="failed", error=str(e))
 
-@app.post("/api/process-video")
 async def api_process_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -527,7 +526,7 @@ def run_document_translation(job_id, session_id, input_path, output_path, file_e
         if src_lang.lower() == "auto":
             preview = document_utils.extract_preview_text(input_path, file_ext)
             actual_src = detect_language_safe(preview)
-            print(f"[*] Auto-detected document language: {actual_src}")
+            logger.info("Auto-detected document language: %s", actual_src)
 
         # Document translation logic
         if file_ext == ".docx":
@@ -551,7 +550,7 @@ def run_document_translation(job_id, session_id, input_path, output_path, file_e
             }
         )
     except Exception as e:
-        print(f"[Error] Job {job_id}: {e}")
+        logger.error("Error in job %s: %s", job_id, e)
         jobs.job_manager.update_job(job_id, status="failed", error=str(e))
 
 @app.post("/api/translate-document")
@@ -591,17 +590,17 @@ async def api_translate_document(
 
 # Mount frontend build folder statically if it exists
 frontend_dist = os.path.abspath(os.path.join(BASE_DIR, "../frontend/dist"))
-print(f"[*] Checking for frontend at: {frontend_dist}")
+logger.info("Checking for frontend at: %s", frontend_dist)
 if os.path.exists(frontend_dist):
-    print(f"[✓] Frontend found. Mounting at /")
+    logger.info("Frontend found. Mounting at /")
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
 else:
-    print(f"[!] Frontend NOT found at {frontend_dist}")
+    logger.warning("Frontend NOT found at %s", frontend_dist)
     @app.get("/")
     def root_fallback():
         return {"message": "API is running. Frontend assets not found."}
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    print(f"[*] Starting server on port {port}...")
+    logger.info("Starting server on port %d...", port)
     uvicorn.run(app, host="0.0.0.0", port=port)

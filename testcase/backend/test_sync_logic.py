@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import soundfile as sf
-import pytest
 from backend.subtitles import merge_audio_segments
 
 class MockModelManager:
@@ -55,5 +54,3 @@ def test_merge_audio_segments_alignment():
             import shutil
             shutil.rmtree(session_dir)
 
-if __name__ == "__main__":
-    test_merge_audio_segments_alignment()
