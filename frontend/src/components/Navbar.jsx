@@ -1,6 +1,6 @@
 import { useLang } from '../LanguageContext';
 
-export default function Navbar({ activeTab, setActiveTab, isMenuOpen, setIsMenuOpen, isConnected, auth, handleLogout }) {
+export default function Navbar({ activeTab, setActiveTab, isMenuOpen, setIsMenuOpen, isConnected }) {
   const { t, lang, setLang } = useLang();
 
   const navItems = [
@@ -68,11 +68,6 @@ export default function Navbar({ activeTab, setActiveTab, isMenuOpen, setIsMenuO
           </select>
         </div>
 
-        {auth && (
-          <button className="btn btn-outline-white" onClick={handleLogout} style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-            🚪 {t('nav.logout')} ({auth.role})
-          </button>
-        )}
         <div className={`navbar-status ${isConnected ? 'online' : 'offline'}`}>
           <span className={`dot ${isConnected ? '' : 'offline'}`} />
           <span className="status-text">{isConnected ? t('nav.statusOnline') : t('nav.statusOffline')}</span>

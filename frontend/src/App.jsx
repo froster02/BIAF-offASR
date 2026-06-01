@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
-import LoginForm from './components/LoginForm';
 import DashboardTab from './components/DashboardTab';
 import TextTranslationTab from './components/TextTranslationTab';
 import DocumentTranslationTab from './components/DocumentTranslationTab';
@@ -12,12 +11,6 @@ import { LanguageProvider, useLang } from './LanguageContext';
 function AppInner() {
   const { t } = useLang();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [auth, setAuth] = useState(() => {
-    const saved = localStorage.getItem('baif_auth');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [modelsStatus, setModelsStatus] = useState({
     is_cached: false,
@@ -91,47 +84,9 @@ function AppInner() {
     settings:  t('page.settingsSub'),
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAuth(data);
-        localStorage.setItem('baif_auth', JSON.stringify(data));
-      } else {
-        alert('Invalid credentials');
-      }
-    } catch {
-      alert('Login error');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleLogout = () => {
-    setAuth(null);
-    localStorage.removeItem('baif_auth');
-    setActiveTab('dashboard');
-  };
-
-  const authFetch = async (url, options = {}) => {
-    const headers = {
-      ...options.headers,
-      'Authorization': `Bearer ${auth?.access_token}`
-    };
-    return fetch(url, { ...options, headers });
-  };
-
   const checkServerStatus = async () => {
-    if (!auth) return;
     try {
-      const res = await authFetch('/api/models-status');
+      const res = await fetch('/api/models-status');
       if (res.ok) {
         const data = await res.json();
         setModelsStatus(data);
@@ -145,11 +100,10 @@ function AppInner() {
   };
 
   useEffect(() => {
-    if (!auth) return;
     let cancelled = false;
     const interval = setInterval(async () => {
       try {
-        const res = await authFetch('/api/models-status');
+        const res = await fetch('/api/models-status');
         if (!cancelled) {
           if (res.ok) {
             const data = await res.json();
@@ -164,14 +118,14 @@ function AppInner() {
       }
     }, 5000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [auth]);
+  }, []);
 
   const handleTextTranslate = async () => {
     if (!textInput.trim()) return;
     setIsTranslatingText(true);
     setTtsAudioUrl('');
     try {
-      const res = await authFetch('/api/translate-text', {
+      const res = await fetch('/api/translate-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -200,7 +154,7 @@ function AppInner() {
     if (!textOutput.trim()) return;
     setIsGeneratingTts(true);
     try {
-      const res = await authFetch('/api/text-to-speech', {
+      const res = await fetch('/api/text-to-speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -289,7 +243,7 @@ function AppInner() {
         });
       }, 800);
 
-      const res = await authFetch('/api/translate-audio', {
+      const res = await fetch('/api/translate-audio', {
         method: 'POST',
         body: formData
       });
@@ -327,7 +281,7 @@ function AppInner() {
   const pollJob = async (job_id, onSuccess, onFail, onProgress) => {
     const interval = setInterval(async () => {
       try {
-        const res = await authFetch(`/api/jobs/${job_id}`);
+        const res = await fetch(`/api/jobs/${job_id}`);
         if (res.ok) {
           const job = await res.json();
           if (onProgress) onProgress(job.progress, job.status);
@@ -366,7 +320,7 @@ function AppInner() {
     formData.append('overlay_voice_option', overlayVoice);
 
     try {
-      const res = await authFetch('/api/process-video', {
+      const res = await fetch('/api/process-video', {
         method: 'POST',
         body: formData
       });
@@ -425,7 +379,7 @@ function AppInner() {
     formData.append('tgt_lang', docTgtLang);
 
     try {
-      const res = await authFetch('/api/translate-document', {
+      const res = await fetch('/api/translate-document', {
         method: 'POST',
         body: formData
       });
@@ -462,85 +416,72 @@ function AppInner() {
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
         isConnected={isConnected}
-        auth={auth}
-        handleLogout={handleLogout}
       />
 
       <div className="main-content">
-        {!auth ? (
-          <LoginForm
-            loginForm={loginForm}
-            setLoginForm={setLoginForm}
-            handleLogin={handleLogin}
-            isLoggingIn={isLoggingIn}
+        <div className="header-container">
+          <h1 className="page-title">{pageTitles[activeTab]}</h1>
+          <p className="page-subtitle">{pageSubtitles[activeTab]}</p>
+        </div>
+
+        {activeTab === 'dashboard' && <DashboardTab setActiveTab={setActiveTab} />}
+
+        {activeTab === 'text' && (
+          <TextTranslationTab
+            textInput={textInput} setTextInput={setTextInput}
+            textOutput={textOutput}
+            textSrcLang={textSrcLang} setTextSrcLang={setTextSrcLang}
+            textTgtLang={textTgtLang} setTextTgtLang={setTextTgtLang}
+            detectedTextLang={detectedTextLang}
+            isTranslatingText={isTranslatingText} handleTextTranslate={handleTextTranslate}
+            ttsAudioUrl={ttsAudioUrl}
+            isGeneratingTts={isGeneratingTts} handleTextToSpeech={handleTextToSpeech}
           />
-        ) : (
-          <>
-            <div className="header-container">
-              <h1 className="page-title">{pageTitles[activeTab]}</h1>
-              <p className="page-subtitle">{pageSubtitles[activeTab]}</p>
-            </div>
+        )}
 
-            {activeTab === 'dashboard' && <DashboardTab setActiveTab={setActiveTab} />}
+        {activeTab === 'docs' && (
+          <DocumentTranslationTab
+            docFile={docFile} handleDocUpload={handleDocUpload}
+            docSrcLang={docSrcLang} setDocSrcLang={setDocSrcLang}
+            docTgtLang={docTgtLang} setDocTgtLang={setDocTgtLang}
+            isProcessingDoc={isProcessingDoc} processDoc={processDoc}
+            docResult={docResult}
+          />
+        )}
 
-            {activeTab === 'text' && (
-              <TextTranslationTab
-                textInput={textInput} setTextInput={setTextInput}
-                textOutput={textOutput}
-                textSrcLang={textSrcLang} setTextSrcLang={setTextSrcLang}
-                textTgtLang={textTgtLang} setTextTgtLang={setTextTgtLang}
-                detectedTextLang={detectedTextLang}
-                isTranslatingText={isTranslatingText} handleTextTranslate={handleTextTranslate}
-                ttsAudioUrl={ttsAudioUrl}
-                isGeneratingTts={isGeneratingTts} handleTextToSpeech={handleTextToSpeech}
-              />
-            )}
+        {activeTab === 'audio' && (
+          <AudioTranslationTab
+            audioFile={audioFile} handleAudioUpload={handleAudioUpload}
+            audioSrcLang={audioSrcLang} setAudioSrcLang={setAudioSrcLang}
+            audioTgtLang={audioTgtLang} setAudioTgtLang={setAudioTgtLang}
+            isProcessingAudio={isProcessingAudio} processAudio={processAudio}
+            audioProgress={audioProgress} audioProgressText={audioProgressText}
+            audioResult={audioResult}
+            audioActiveSubTab={audioActiveSubTab} setAudioActiveSubTab={setAudioActiveSubTab}
+            isRecording={isRecording} startRecording={startRecording} stopRecording={stopRecording}
+            recordingTime={recordingTime}
+          />
+        )}
 
-            {activeTab === 'docs' && (
-              <DocumentTranslationTab
-                docFile={docFile} handleDocUpload={handleDocUpload}
-                docSrcLang={docSrcLang} setDocSrcLang={setDocSrcLang}
-                docTgtLang={docTgtLang} setDocTgtLang={setDocTgtLang}
-                isProcessingDoc={isProcessingDoc} processDoc={processDoc}
-                docResult={docResult}
-              />
-            )}
+        {activeTab === 'video' && (
+          <VideoTranslationTab
+            videoFile={videoFile} handleVideoUpload={handleVideoUpload}
+            videoSrcLang={videoSrcLang} setVideoSrcLang={setVideoSrcLang}
+            videoTgtLang={videoTgtLang} setVideoTgtLang={setVideoTgtLang}
+            burnSubtitles={burnSubtitles} setBurnSubtitles={setBurnSubtitles}
+            overlayVoice={overlayVoice} setOverlayVoice={setOverlayVoice}
+            isProcessingVideo={isProcessingVideo} processVideo={processVideo}
+            videoProgress={videoProgress} videoProgressText={videoProgressText}
+            videoResult={videoResult}
+          />
+        )}
 
-            {activeTab === 'audio' && (
-              <AudioTranslationTab
-                audioFile={audioFile} handleAudioUpload={handleAudioUpload}
-                audioSrcLang={audioSrcLang} setAudioSrcLang={setAudioSrcLang}
-                audioTgtLang={audioTgtLang} setAudioTgtLang={setAudioTgtLang}
-                isProcessingAudio={isProcessingAudio} processAudio={processAudio}
-                audioProgress={audioProgress} audioProgressText={audioProgressText}
-                audioResult={audioResult}
-                audioActiveSubTab={audioActiveSubTab} setAudioActiveSubTab={setAudioActiveSubTab}
-                isRecording={isRecording} startRecording={startRecording} stopRecording={stopRecording}
-                recordingTime={recordingTime}
-              />
-            )}
-
-            {activeTab === 'video' && (
-              <VideoTranslationTab
-                videoFile={videoFile} handleVideoUpload={handleVideoUpload}
-                videoSrcLang={videoSrcLang} setVideoSrcLang={setVideoSrcLang}
-                videoTgtLang={videoTgtLang} setVideoTgtLang={setVideoTgtLang}
-                burnSubtitles={burnSubtitles} setBurnSubtitles={setBurnSubtitles}
-                overlayVoice={overlayVoice} setOverlayVoice={setOverlayVoice}
-                isProcessingVideo={isProcessingVideo} processVideo={processVideo}
-                videoProgress={videoProgress} videoProgressText={videoProgressText}
-                videoResult={videoResult}
-              />
-            )}
-
-            {activeTab === 'settings' && (
-              <SettingsTab
-                whisperSize={whisperSize} setWhisperSize={setWhisperSize}
-                isConnected={isConnected} modelsStatus={modelsStatus}
-                checkServerStatus={checkServerStatus}
-              />
-            )}
-          </>
+        {activeTab === 'settings' && (
+          <SettingsTab
+            whisperSize={whisperSize} setWhisperSize={setWhisperSize}
+            isConnected={isConnected} modelsStatus={modelsStatus}
+            checkServerStatus={checkServerStatus}
+          />
         )}
       </div>
 
