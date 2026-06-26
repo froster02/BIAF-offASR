@@ -1,0 +1,11 @@
+# Seed vocabulary for services/compound_trie.py — one compound/regional term per line.
+# This is a starter list, NOT a verified/complete corpus. Extend with a real
+# domain vocabulary (place names, festival/cultural terms, administrative
+# terms) before relying on this in production; an empty or sparse trie means
+# fix_compounds() is a safe no-op rather than a working corrector.
+रथयात्रा
+गणेशोत्सव
+स्वातंत्र्यदिन
+राष्ट्रध्वज
+ग्रामपंचायत
+महानगरपालिका

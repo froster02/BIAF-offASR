@@ -1,0 +1,50 @@
+{
+  "lang_id": {
+    "file": "lid.176.ftz",
+    "source": "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz",
+    "fetch_script": "scripts/fetch_lid_model.py",
+    "size_mb_approx": 0.9
+  },
+  "whisper": {
+    "variant": "medium",
+    "dir": "whisper-medium-int8",
+    "quantization": "int8",
+    "engine": "faster-whisper (ctranslate2 backend)",
+    "size_mb_approx": 1500,
+    "verified": false,
+    "note": "Convert with: ct2-transformers-converter --model openai/whisper-medium --output_dir models/whisper-medium-int8 --quantization int8"
+  },
+  "translation": {
+    "en_indic": {
+      "dir": "indictrans2-en-indic-ct2-int8",
+      "source_model": "ai4bharat/indictrans2-en-indic-dist-200M",
+      "size_mb_approx": 800,
+      "verified": false,
+      "note": "Exact HF repo id unverified in this sandbox (no network model pull performed) — confirm on AI4Bharat's model hub before relying on this id, see scripts/convert_indictrans2_ct2.py."
+    },
+    "indic_indic": {
+      "dir": "indictrans2-indic-indic-ct2-int8",
+      "source_model": "ai4bharat/indictrans2-indic-indic-dist-320M",
+      "size_mb_approx": 1300,
+      "verified": false,
+      "note": "Same caveat as en_indic — verify exact repo id."
+    }
+  },
+  "post_asr_correction": {
+    "dir": "post-asr-correction-onnx",
+    "base_model": "google/mt5-small",
+    "size_mb_approx": 1200,
+    "verified": false,
+    "note": "Ships as base mT5-small until a task-specific fine-tune for Hindi/Marathi ASR correction is trained — see services/post_asr_correction.py docstring."
+  },
+  "ocr": {
+    "engine": "paddleocr",
+    "lang": "devanagari",
+    "dir": "paddleocr",
+    "size_mb_approx": 350,
+    "verified": false
+  },
+  "estimated_peak_concurrent_rss_mb": 5650,
+  "ram_ceiling_mb": 7168,
+  "note": "estimated_peak_concurrent_rss_mb is a sum-of-parts estimate, NOT a measurement. Must be re-validated with tests/test_batch_verification.py on the actual Windows 11 / i5-11th-gen target."
+}
