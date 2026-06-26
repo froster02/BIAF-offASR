@@ -2,7 +2,7 @@ import os
 import shutil
 import uuid
 import logging
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -74,10 +74,6 @@ def login(req: LoginRequest):
     token = auth_mod.create_access_token(data={"sub": req.username, "role": row[1]})
     return {"access_token": token, "token_type": "bearer", "role": row[1]}
 
-# Dependency for protected routes
-protected = [Depends(auth_mod.get_current_user)]
-admin_only = [Depends(auth_mod.require_admin)]
-
 # Enable CORS for frontend local development
 app.add_middleware(
     CORSMiddleware,
@@ -117,7 +113,7 @@ def ping():
     return "pong"
 
 @app.get("/api/models-status")
-def get_models_status(user=Depends(auth_mod.get_current_user)):
+def get_models_status():
     """
     Check if the models cache exists and return which files are cached
     """
@@ -171,14 +167,14 @@ def api_detect_language(req: dict):
     return {"language": detect_language_safe(text)}
 
 @app.get("/api/jobs/{job_id}")
-def get_job_status(job_id: str, user=Depends(auth_mod.get_current_user)):
+def get_job_status(job_id: str):
     job = jobs.job_manager.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
 @app.post("/api/translate-text")
-def translate_text(req: TranslationRequest, user=Depends(auth_mod.get_current_user)):
+def translate_text(req: TranslationRequest):
     """
     Translate text using offline NLLB-200 model
     """
@@ -198,7 +194,6 @@ async def transcribe_audio(
     file: UploadFile = File(...),
     model_size: str = Form("base"),
     language: str = Form("English"),
-    user=Depends(auth_mod.get_current_user)
 ):
     """
     Transcribe uploaded audio or video file using offline Whisper
@@ -255,7 +250,6 @@ async def translate_audio(
     model_size: str = Form("base"),
     src_lang: str = Form("English"),
     tgt_lang: str = Form("Hindi"),
-    user=Depends(auth_mod.get_current_user)
 ):
     """
     Transcribe and translate an audio or video file
@@ -345,7 +339,7 @@ async def translate_audio(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/text-to-speech")
-def text_to_speech(req: TTSRequest, user=Depends(auth_mod.get_current_user)):
+def text_to_speech(req: TTSRequest):
     """
     Synthesize text into speech and return WAV audio binary stream
     """
@@ -455,6 +449,7 @@ def run_video_processing(job_id, session_id, input_path, session_dir, file_ext, 
         logger.error("Error in job %s: %s", job_id, e)
         jobs.job_manager.update_job(job_id, status="failed", error=str(e))
 
+@app.post("/api/process-video")
 async def api_process_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -463,7 +458,6 @@ async def api_process_video(
     tgt_lang: str = Form("Hindi"),
     burn_subtitles_option: bool = Form(True),
     overlay_voice_option: bool = Form(False),
-    user=Depends(auth_mod.get_current_user)
 ):
     """
     Complete video translation pipeline asynchronously
@@ -559,7 +553,6 @@ async def api_translate_document(
     file: UploadFile = File(...),
     src_lang: str = Form("English"),
     tgt_lang: str = Form("Hindi"),
-    user=Depends(auth_mod.get_current_user)
 ):
     """
     Translate uploaded document (docx, pptx, xlsx, pdf) asynchronously
