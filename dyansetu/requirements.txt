@@ -1,0 +1,44 @@
+# Dyansetu — CPU-only, offline translation & transcription backend
+# Target: Windows 11, Intel i5 11th Gen, 16GB RAM, NO GPU, <=7GB runtime footprint.
+# All inference paths below are CPU/INT8 quantized; no torch/transformers runtime
+# dependency is required for the hot path (kept out on purpose to control RAM).
+
+# --- API layer ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+python-multipart==0.0.20
+
+# --- Quantized inference runtimes ---
+ctranslate2==4.5.0          # INT8 MT execution (IndicTrans2-Dist / Dist-M2M), oneMKL-backed on Intel CPUs
+onnxruntime==1.20.1         # CPU execution provider for PaddleOCR / any ONNX-exported layers
+faster-whisper==1.1.1       # CTranslate2-backed Whisper, INT8 quantization, no torch required at runtime
+
+# --- Lightweight correction model runtime ---
+# ByT5-small/mT5-small post-ASR correction runs through ONNX Runtime (optimum), NOT
+# torch — torch alone adds ~700MB-1GB+ resident RAM which the 7GB ceiling can't absorb
+# alongside Whisper + IndicTrans2 loaded concurrently. torch is needed only at export
+# time (see scripts/export_correction_model_onnx.py) — keep it in a separate
+# requirements-dev.txt on the export workstation, never in the production bundle.
+optimum[onnxruntime]==1.23.3
+sentencepiece==0.2.0
+transformers==4.47.1          # tokenizer-only usage at runtime (no torch import on hot path)
+
+# --- Language ID & script normalization ---
+fasttext-wheel==0.9.2        # prebuilt wheels; avoids MSVC build step on Windows
+indic-nlp-library==0.92
+
+# --- OCR ---
+paddleocr==2.9.1
+paddlepaddle==2.6.2          # CPU build
+
+# --- Document structure parsing / serialization ---
+pymupdf==1.25.1
+python-docx==1.1.2
+python-pptx==1.0.2
+openpyxl==3.1.5
+pandas==2.2.3
+
+# --- Packaging ---
+pyinstaller==6.11.1
+psutil==6.1.1                 # RAM-ceiling monitoring during /batch verification
