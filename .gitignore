@@ -94,3 +94,16 @@ frontend/dist/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# --- Docs ---
+*.md
+
+# --- Claude / Ruflo Tooling ---
+.claude/
+.claude-flow/
+.swarm/
+.superpowers/
+ruvector.db
+
+# --- Type Checking Cache ---
+.mypy_cache/
