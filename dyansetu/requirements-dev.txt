@@ -2,5 +2,5 @@
 # on the production Windows target. Adds torch, which the runtime intentionally
 # avoids (see requirements.txt's note on optimum[onnxruntime] vs torch).
 -r requirements.txt
-torch==2.5.1
+torch==2.12.1
 optimum[exporters]==1.23.3

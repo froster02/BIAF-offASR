@@ -7,7 +7,7 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
-python-multipart==0.0.20
+python-multipart==0.0.31
 
 # --- Quantized inference runtimes ---
 ctranslate2==4.5.0          # INT8 MT execution (IndicTrans2-Dist / Dist-M2M), oneMKL-backed on Intel CPUs
@@ -21,8 +21,8 @@ faster-whisper==1.1.1       # CTranslate2-backed Whisper, INT8 quantization, no 
 # time (see scripts/export_correction_model_onnx.py) — keep it in a separate
 # requirements-dev.txt on the export workstation, never in the production bundle.
 optimum[onnxruntime]==1.23.3
-sentencepiece==0.2.0
-transformers==4.47.1          # tokenizer-only usage at runtime (no torch import on hot path)
+sentencepiece==0.2.1
+transformers==5.0.0rc3          # tokenizer-only usage at runtime (no torch import on hot path)
 
 # --- Language ID & script normalization ---
 fasttext-wheel==0.9.2        # prebuilt wheels; avoids MSVC build step on Windows
